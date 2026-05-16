@@ -48,6 +48,19 @@ export interface DoubleRecord {
   }[];
 }
 
+export interface FstTipRecord {
+  id: number;
+  date: string;
+  homeTeam: string;
+  awayTeam: string;
+  pick: string;
+  market: string;
+  kickoff: string;
+  status: DoubleStatus;
+  homeScore: number | null;
+  awayScore: number | null;
+}
+
 export interface Stats {
   total: number;
   wins: number;

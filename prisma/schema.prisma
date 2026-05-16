@@ -38,3 +38,18 @@ model BetSelection {
   scrapedAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
+
+model FstTip {
+  id        Int      @id @default(autoincrement())
+  date      String   @unique
+  homeTeam  String
+  awayTeam  String
+  pick      String
+  market    String
+  kickoff   String
+  status    String   @default("PENDING")
+  homeScore Int?
+  awayScore Int?
+  scrapedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

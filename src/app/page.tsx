@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { StatsBar } from '@/components/StatsBar';
 import { DoubleCard } from '@/components/DoubleCard';
+import { FstSection } from '@/components/FstSection';
 import type { DoubleRecord, Stats } from '@/lib/types';
 
 const DEFAULT_STATS: Stats = {
@@ -106,12 +107,19 @@ export default function HomePage() {
             </div>
 
             {/* Footer */}
-            <div className="mt-12 pb-8 text-center">
+            <div className="mt-4 pb-8 text-center">
               <p className="text-[10px] text-[var(--chalk-dim)] uppercase tracking-widest">
-                BetMines Double Tracker · Local MVP
+                BetMines Double Tracker
               </p>
             </div>
           </div>
+        )}
+
+        {/* FreeSuperTips section — always shown */}
+        <FstSection />
+
+        {!loading && !error && doubles.length === 0 && (
+          <div className="pb-12" />
         )}
       </main>
     </div>

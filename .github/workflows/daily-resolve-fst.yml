@@ -1,0 +1,26 @@
+name: Daily Resolve FST
+
+on:
+  schedule:
+    - cron: '45 * * * *'  # Every hour at :45
+  workflow_dispatch:
+
+jobs:
+  resolve-fst:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - run: npx prisma generate
+
+      - name: Resolve FST pending tips
+        run: npm run resolve:fst
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

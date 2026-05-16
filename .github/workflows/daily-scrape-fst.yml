@@ -1,0 +1,29 @@
+name: Daily Scrape FST
+
+on:
+  schedule:
+    - cron: '15 * * * *'  # Every hour at :15
+  workflow_dispatch:
+
+jobs:
+  scrape-fst:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Scrape FST Bet of the Day
+        run: npm run scrape:fst
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
