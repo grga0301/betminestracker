@@ -2,7 +2,7 @@
 // Run with: npm run resolve:fst
 import { getPendingFstTips, updateFstTipResult, getAllFstTips } from '../src/lib/services/fstService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
-import { scrapeResultsFromDailyPage } from '../src/lib/scraper/betmines';
+import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
 import { evaluateSelection } from '../src/lib/services/resultEvaluator';
 
 function normalizeTeam(name: string): string {
@@ -72,6 +72,19 @@ async function main() {
       score = findInDailyResults(dailyResults, tip.homeTeam, tip.awayTeam);
       if (score) {
         console.log(`  ✓ Betmines: ${score.homeScore}-${score.awayScore}`);
+      }
+    }
+
+    if (!score) {
+      // 3. Final fallback: betmines football-results page (comprehensive)
+      console.log('  🔍 Trying betmines football-results...');
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        score = await scrapeMatchResult(tip.homeTeam, tip.awayTeam);
+        if (score) break;
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 3000));
+      }
+      if (score) {
+        console.log(`  ✓ Betmines football-results: ${score.homeScore}-${score.awayScore}`);
       }
     }
 
