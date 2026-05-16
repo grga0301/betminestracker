@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+
+# Production build
+build/
+
+# Database (don't commit local data)
+prisma/*.db
+prisma/*.db-journal
+
+# Environment
+.env.local
+.env.*.local
+
+# Playwright browsers
+playwright-browsers/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

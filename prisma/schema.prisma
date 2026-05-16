@@ -1,0 +1,41 @@
+// prisma/schema.prisma
+// NOTE: SQLite does not support enums — status fields stored as plain strings
+// Valid values: "PENDING" | "WIN" | "LOSS" | "VOID"
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model BetDouble {
+  id         Int            @id @default(autoincrement())
+  date       String         @unique
+  totalOdds  Float
+  status     String         @default("PENDING")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  selections BetSelection[]
+}
+
+model BetSelection {
+  id           Int       @id @default(autoincrement())
+  doubleId     Int
+  double       BetDouble @relation(fields: [doubleId], references: [id], onDelete: Cascade)
+  homeTeam     String
+  awayTeam     String
+  market       String
+  line         Float?
+  odd          Float
+  league       String
+  country      String
+  kickoff      String
+  resultStatus String    @default("PENDING")
+  homeScore    Int?
+  awayScore    Int?
+  scrapedAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
