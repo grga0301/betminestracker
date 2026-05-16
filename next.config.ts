@@ -3,7 +3,7 @@ import type { NextConfig } from 'next';
  
 const nextConfig: NextConfig = {
   // Next.js 15: serverExternalPackages replaces the old experimental key
-  serverExternalPackages: ['@prisma/client', 'prisma'],
+  serverExternalPackages: ['@prisma/client', 'prisma', 'playwright', 'chromium'],
 };
  
 export default nextConfig;

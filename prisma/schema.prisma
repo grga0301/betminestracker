@@ -1,13 +1,12 @@
 // prisma/schema.prisma
-// NOTE: SQLite does not support enums — status fields stored as plain strings
-// Valid values: "PENDING" | "WIN" | "LOSS" | "VOID"
+// Valid status values: "PENDING" | "WIN" | "LOSS" | "VOID"
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
