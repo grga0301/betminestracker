@@ -1,39 +1,31 @@
 // src/app/api/fst/scrape/route.ts
+// Runs directly on Vercel (no Playwright = no GitHub Actions needed)
 import { NextResponse } from 'next/server';
-
-const GITHUB_OWNER = 'grga0301';
-const GITHUB_REPO = 'betminestracker';
+import { scrapeFstBetOfTheDay } from '@/lib/scraper/freesupertips';
+import { saveFstTip } from '@/lib/services/fstService';
 
 export async function POST() {
-  const token = process.env.GITHUB_PAT;
+  try {
+    const tip = await scrapeFstBetOfTheDay();
 
-  if (!token) {
-    return NextResponse.json(
-      { error: 'GitHub PAT not configured.' },
-      { status: 500 }
-    );
-  }
-
-  const res = await fetch(
-    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/daily-scrape-fst.yml/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ref: 'main' }),
+    if (!tip) {
+      return NextResponse.json({ error: 'Could not extract FST tip from page' }, { status: 500 });
     }
-  );
 
-  if (!res.ok) {
-    const text = await res.text();
-    return NextResponse.json({ error: `GitHub API error: ${text}` }, { status: 500 });
+    const { saved, alreadyExists } = await saveFstTip(tip);
+
+    return NextResponse.json({
+      date: tip.date,
+      homeTeam: tip.homeTeam,
+      awayTeam: tip.awayTeam,
+      pick: tip.pick,
+      market: tip.market,
+      odd: tip.odd,
+      saved,
+      alreadyExists,
+    });
+  } catch (err) {
+    console.error('[API /fst/scrape]', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
-
-  return NextResponse.json({
-    message: 'FST scrape triggered via GitHub Actions.',
-    triggered: true,
-  });
 }
