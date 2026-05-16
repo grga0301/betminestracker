@@ -2,33 +2,23 @@ name: Daily Resolve
 
 on:
   schedule:
-    # Runs every day at 23:00 UTC (01:00 CET next day)
-    # Most European matches finish by then
-    - cron: '0 23 * * *'
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+    - cron: '30 * * * *'  # Every hour at :30 (offset from scrape)
+  workflow_dispatch:
 
 jobs:
   resolve:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright Chromium
-        run: npx playwright install chromium --with-deps
-
-      - name: Generate Prisma client
-        run: npx prisma generate
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - run: npx prisma generate
 
       - name: Resolve pending doubles
         run: npm run resolve
