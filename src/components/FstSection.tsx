@@ -2,11 +2,17 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import type { FstTipRecord } from '@/lib/types';
+import type { FstTipRecord, FstStats } from '@/lib/types';
 import { FstCard } from './FstCard';
+
+const DEFAULT_STATS: FstStats = {
+  total: 0, wins: 0, losses: 0, pending: 0,
+  winRate: 0, currentStreak: 0, streakType: 'NONE', avgOdds: 0,
+};
 
 export function FstSection() {
   const [tips, setTips] = useState<FstTipRecord[]>([]);
+  const [stats, setStats] = useState<FstStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
   const [scrapingFst, setScrapingFst] = useState(false);
   const [resolvingFst, setResolvingFst] = useState(false);
@@ -18,8 +24,9 @@ export function FstSection() {
       if (!res.ok) throw new Error('fetch failed');
       const data = await res.json();
       setTips(data.tips ?? []);
+      setStats(data.stats ?? DEFAULT_STATS);
     } catch {
-      // silently fail; show empty state
+      // silently fail
     } finally {
       setLoading(false);
     }
@@ -33,16 +40,12 @@ export function FstSection() {
     try {
       const res = await fetch('/api/fst/scrape', { method: 'POST' });
       const data = await res.json();
-      if (res.ok) {
-        setMsg({
-          text: data.triggered
-            ? '⏳ FST scrape pokrenuto u pozadini. Osvježi za ~2 minute.'
-            : `✓ ${data.message}`,
-          type: data.triggered ? 'info' : 'success',
-        });
-      } else {
-        setMsg({ text: `Error: ${data.error}`, type: 'error' });
-      }
+      setMsg({
+        text: res.ok
+          ? (data.triggered ? '⏳ FST scrape pokrenuto u pozadini. Osvježi za ~2 min.' : `✓ ${data.message}`)
+          : `Error: ${data.error}`,
+        type: res.ok ? (data.triggered ? 'info' : 'success') : 'error',
+      });
     } catch {
       setMsg({ text: 'Network error', type: 'error' });
     } finally {
@@ -56,16 +59,12 @@ export function FstSection() {
     try {
       const res = await fetch('/api/fst/resolve', { method: 'POST' });
       const data = await res.json();
-      if (res.ok) {
-        setMsg({
-          text: data.triggered
-            ? '⏳ FST resolve pokrenuto u pozadini. Osvježi za ~2 minute.'
-            : `✓ ${data.message}`,
-          type: data.triggered ? 'info' : 'success',
-        });
-      } else {
-        setMsg({ text: `Error: ${data.error}`, type: 'error' });
-      }
+      setMsg({
+        text: res.ok
+          ? (data.triggered ? '⏳ FST resolve pokrenuto u pozadini. Osvježi za ~2 min.' : `✓ ${data.message}`)
+          : `Error: ${data.error}`,
+        type: res.ok ? (data.triggered ? 'info' : 'success') : 'error',
+      });
     } catch {
       setMsg({ text: 'Network error', type: 'error' });
     } finally {
@@ -79,23 +78,14 @@ export function FstSection() {
     info: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
   };
 
-  const wins = tips.filter((t) => t.status === 'WIN').length;
-  const losses = tips.filter((t) => t.status === 'LOSS').length;
-
   return (
     <section className="mt-12">
       {/* Section header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xs uppercase tracking-widest text-[var(--chalk-dim)]">
             FreeSuperTips · Bet of the Day
           </h2>
-          {tips.length > 0 && (
-            <p className="text-[10px] text-[var(--chalk-dim)]/60 mt-0.5">
-              {wins}W / {losses}L
-              {wins + losses > 0 && ` · ${((wins / (wins + losses)) * 100).toFixed(0)}% WR`}
-            </p>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -119,6 +109,37 @@ export function FstSection() {
       {msg && (
         <div className={`mb-3 text-xs px-3 py-2 rounded-lg border animate-fade-in ${msgClass[msg.type]}`}>
           {msg.text}
+        </div>
+      )}
+
+      {/* Stats bar */}
+      {stats.total > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <FstStatCard
+            label="Win Rate"
+            value={stats.total > 0 ? `${stats.winRate.toFixed(1)}%` : '—'}
+            sub={`${stats.wins}W / ${stats.losses}L`}
+            accent={stats.winRate >= 50 ? 'green' : stats.winRate > 0 ? 'red' : 'dim'}
+          />
+          <FstStatCard
+            label="Total Tips"
+            value={String(stats.total)}
+            sub={`${stats.pending} pending`}
+            accent="dim"
+          />
+          <FstStatCard
+            label="Streak"
+            value={stats.currentStreak > 0 ? String(stats.currentStreak) : '—'}
+            sub={stats.streakType !== 'NONE' ? `${stats.streakType === 'WIN' ? '🟢' : '🔴'} ${stats.streakType}` : 'No data yet'}
+            accent={stats.streakType === 'WIN' ? 'green' : stats.streakType === 'LOSS' ? 'red' : 'dim'}
+          />
+          <FstStatCard
+            label="Avg Odds"
+            value={stats.total > 0 ? stats.avgOdds.toFixed(2) : '—'}
+            sub="best bookie"
+            accent="dim"
+            mono
+          />
         </div>
       )}
 
@@ -147,6 +168,28 @@ export function FstSection() {
           ))}
         </div>
       )}
+
+      <div className="mt-8 pb-8 text-center">
+        <p className="text-[10px] text-[var(--chalk-dim)] uppercase tracking-widest">
+          BetMines Double Tracker
+        </p>
+      </div>
     </section>
+  );
+}
+
+function FstStatCard({
+  label, value, sub, accent, mono,
+}: {
+  label: string; value: string; sub: string;
+  accent: 'green' | 'red' | 'dim'; mono?: boolean;
+}) {
+  const accentClass = { green: 'text-green-400', red: 'text-red-400', dim: 'text-[var(--chalk)]' }[accent];
+  return (
+    <div className="card p-4">
+      <p className="text-xs uppercase tracking-widest text-[var(--chalk-dim)] mb-1">{label}</p>
+      <p className={`text-2xl font-bold ${accentClass} ${mono ? 'font-mono-data' : ''}`}>{value}</p>
+      <p className="text-xs text-[var(--chalk-dim)] mt-1">{sub}</p>
+    </div>
   );
 }

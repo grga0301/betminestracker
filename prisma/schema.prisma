@@ -47,6 +47,7 @@ model FstTip {
   pick      String
   market    String
   kickoff   String
+  odd       Float    @default(0)
   status    String   @default("PENDING")
   homeScore Int?
   awayScore Int?

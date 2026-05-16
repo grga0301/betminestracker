@@ -8,6 +8,7 @@ export interface ScrapedFstTip {
   pick: string;
   market: string;
   kickoff: string;
+  odd: number;
 }
 
 function normalizeTeamName(name: string): string {
@@ -41,14 +42,6 @@ function inferMarket(pick: string, homeTeam: string, awayTeam: string): string {
   return pick;
 }
 
-// Extract team name from background-image URL like:
-// url("/wp-content/themes/freesupertips/image/team/Manchester City.png")
-function teamNameFromStyle(style: string): string {
-  const m = style.match(/\/team\/(.+?)\.png/i);
-  if (!m) return '';
-  return decodeURIComponent(m[1]).trim();
-}
-
 export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
   try {
@@ -68,13 +61,11 @@ export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
 
     const result = await page.evaluate(() => {
       // Find the Card containing "Bet of the Day Tip" h2
-      const allH2 = Array.from(document.querySelectorAll('h2'));
-      const tipH2 = allH2.find((h) =>
+      const tipH2 = Array.from(document.querySelectorAll('h2')).find((h) =>
         h.textContent?.trim().toLowerCase().includes('bet of the day tip')
       );
       if (!tipH2) return null;
 
-      // The h2 is inside <header> inside <div class="Card">
       const card = tipH2.closest('.Card');
       if (!card) return null;
 
@@ -84,16 +75,12 @@ export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
       // Kickoff time
       const kickoff = leg.querySelector('time')?.textContent?.trim() ?? '';
 
-      // Pick text (the team picked to win)
-      const pickEl = leg.querySelector('.Leg__win');
-      const pick = pickEl?.textContent?.trim() ?? '';
-
-      // Home team from ".Leg__lose" which contains "at Chelsea"
-      const loseEl = leg.querySelector('.Leg__lose');
-      const atText = loseEl?.textContent?.trim() ?? '';
+      // Pick text and home team
+      const pick = leg.querySelector('.Leg__win')?.textContent?.trim() ?? '';
+      const atText = leg.querySelector('.Leg__lose')?.textContent?.trim() ?? '';
       const homeTeam = atText.replace(/^at\s+/i, '').trim();
 
-      // Both teams from background-image URLs on .Team--xs divs
+      // Team names from background-image URLs
       const teamDivs = Array.from(leg.querySelectorAll('.Team--xs'));
       const teamNames = teamDivs.map((el) => {
         const style = (el as HTMLElement).style?.backgroundImage ?? el.getAttribute('style') ?? '';
@@ -101,11 +88,36 @@ export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
         return m ? decodeURIComponent(m[1]).trim() : '';
       }).filter(Boolean);
 
-      // teamNames[0] = home, teamNames[1] = away (order in DOM matches home/away)
       const homeFromImg = teamNames[0] ?? homeTeam;
       const awayFromImg = teamNames[1] ?? '';
 
-      return { kickoff, pick, homeTeam: homeFromImg || homeTeam, awayTeam: awayFromImg };
+      // ── Extract best odds from the BetGrid ──
+      // The BetGrid has a stake selector; read whichever option is selected
+      const betGrid = card.querySelector('.BetGrid');
+      let bestOdds = 0;
+
+      if (betGrid) {
+        const stakeSelect = betGrid.querySelector('select') as HTMLSelectElement | null;
+        // Find selected option's value; default to 20 if none selected
+        const selectedOption = stakeSelect
+          ? Array.from(stakeSelect.options).find((o) => o.selected || o.classList.contains('active'))
+          : null;
+        const stake = parseFloat(selectedOption?.value ?? '20');
+
+        // Collect all BetGrid__returns amounts
+        const returnEls = Array.from(betGrid.querySelectorAll('.BetGrid__returns'));
+        const returns = returnEls.map((el) => {
+          const text = (el.textContent ?? '').replace(/[£,]/g, '').trim();
+          return parseFloat(text);
+        }).filter((n) => !isNaN(n) && n > 0);
+
+        const bestReturn = returns.length > 0 ? Math.max(...returns) : 0;
+        if (stake > 0 && bestReturn > 0) {
+          bestOdds = Math.round((bestReturn / stake) * 100) / 100;
+        }
+      }
+
+      return { kickoff, pick, homeTeam: homeFromImg || homeTeam, awayTeam: awayFromImg, bestOdds };
     });
 
     if (!result || !result.pick) {
@@ -114,14 +126,10 @@ export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
     }
 
     const today = new Date().toISOString().split('T')[0];
-
-    // Away team fallback: strip "to Win" from pick if image extraction failed
-    const awayTeam = result.awayTeam ||
-      result.pick.replace(/\s+to\s+win.*/i, '').trim();
-
+    const awayTeam = result.awayTeam || result.pick.replace(/\s+to\s+win.*/i, '').trim();
     const market = inferMarket(result.pick, result.homeTeam, awayTeam);
 
-    console.log(`[FST] Extracted: ${result.homeTeam} vs ${awayTeam} | Pick: ${result.pick} | Market: ${market} | Kickoff: ${result.kickoff}`);
+    console.log(`[FST] ${result.homeTeam} vs ${awayTeam} | ${result.pick} | ${market} | KO: ${result.kickoff} | Odd: ${result.bestOdds}`);
 
     return {
       date: today,
@@ -130,6 +138,7 @@ export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
       pick: result.pick,
       market,
       kickoff: result.kickoff,
+      odd: result.bestOdds,
     };
   } finally {
     await browser.close();

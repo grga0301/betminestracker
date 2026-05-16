@@ -33,15 +33,22 @@ export function FstCard({ tip, index }: Props) {
       className={`card ${cardClass} p-5 animate-slide-up`}
       style={{ animationDelay: delay, opacity: 0 }}
     >
-      {/* Header */}
+      {/* Header row */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <p className="text-[10px] uppercase tracking-widest text-[var(--chalk-dim)] mb-0.5">
             {formatDate(tip.date)}
           </p>
-          <p className="text-[10px] uppercase tracking-widest text-[var(--chalk-dim)]/60">
-            FreeSuperTips · Bet of the Day
-          </p>
+          <div className="flex items-center gap-3">
+            {tip.odd > 0 && (
+              <span className="font-mono-data text-xl font-bold text-[var(--chalk)]">
+                @{tip.odd.toFixed(2)}
+              </span>
+            )}
+            <span className="text-[10px] uppercase tracking-widest text-[var(--chalk-dim)]/60">
+              FreeSuperTips · BOTD
+            </span>
+          </div>
         </div>
         <StatusBadge status={tip.status} size="lg" />
       </div>
@@ -56,8 +63,8 @@ export function FstCard({ tip, index }: Props) {
             <span>{tip.awayTeam}</span>
           </p>
 
-          {/* Pick + market */}
-          <div className="flex items-center gap-2 mt-2">
+          {/* Market + pick */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="text-[11px] bg-white/5 rounded px-2 py-0.5 text-[var(--chalk-dim)] border border-white/8">
               {tip.market}
             </span>
@@ -68,20 +75,20 @@ export function FstCard({ tip, index }: Props) {
 
           {/* Kickoff */}
           {tip.kickoff && (
-            <p className="text-[10px] text-[var(--chalk-dim)] mt-1">
+            <p className="text-[10px] text-[var(--chalk-dim)] mt-1.5">
               Kickoff: {tip.kickoff}
             </p>
           )}
         </div>
 
         {/* Score */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          {hasScore && (
+        {hasScore && (
+          <div className="flex-shrink-0">
             <span className="font-mono-data text-sm font-bold text-[var(--chalk)]">
               {tip.homeScore} - {tip.awayScore}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -56,9 +56,21 @@ export interface FstTipRecord {
   pick: string;
   market: string;
   kickoff: string;
+  odd: number;
   status: DoubleStatus;
   homeScore: number | null;
   awayScore: number | null;
+}
+
+export interface FstStats {
+  total: number;
+  wins: number;
+  losses: number;
+  pending: number;
+  winRate: number;
+  currentStreak: number;
+  streakType: 'WIN' | 'LOSS' | 'NONE';
+  avgOdds: number;
 }
 
 export interface Stats {
