@@ -1,22 +1,40 @@
 // src/app/api/resolve/route.ts
 
 import { NextResponse } from 'next/server';
-import { resolveAllPending } from '@/lib/services/resolveService';
+
+const GITHUB_OWNER = 'grga0301';
+const GITHUB_REPO = 'betminestracker';
 
 export async function POST() {
-  try {
-    console.log('[API /resolve] Starting resolver...');
-    const results = await resolveAllPending();
+  const token = process.env.GITHUB_PAT;
 
-    return NextResponse.json({
-      message: `Resolved ${results.length} double(s).`,
-      results,
-    });
-  } catch (err) {
-    console.error('[API /resolve]', err);
+  if (!token) {
     return NextResponse.json(
-      { error: `Resolve failed: ${(err as Error).message}` },
+      { error: 'GitHub PAT not configured. Add GITHUB_PAT to Vercel environment variables.' },
       { status: 500 }
     );
   }
+
+  const res = await fetch(
+    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/daily-resolve.yml/dispatches`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ref: 'main' }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    return NextResponse.json({ error: `GitHub API error: ${text}` }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    message: 'Resolve job triggered via GitHub Actions. Refresh in ~2 minutes to see results.',
+    triggered: true,
+  });
 }
