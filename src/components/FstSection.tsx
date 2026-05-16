@@ -64,12 +64,12 @@ export function FstSection() {
     try {
       const res = await fetch('/api/fst/resolve', { method: 'POST' });
       const data = await res.json();
-      setMsg({
-        text: res.ok
-          ? (data.triggered ? '⏳ FST resolve pokrenuto u pozadini. Osvježi za ~2 min.' : `✓ ${data.message}`)
-          : `Error: ${data.error}`,
-        type: res.ok ? (data.triggered ? 'info' : 'success') : 'error',
-      });
+      if (res.ok) {
+        setMsg({ text: `✓ ${data.message}`, type: 'success' });
+        fetchTips();
+      } else {
+        setMsg({ text: `Error: ${data.error}`, type: 'error' });
+      }
     } catch {
       setMsg({ text: 'Network error', type: 'error' });
     } finally {
