@@ -20,12 +20,14 @@ export function Header({ onRefresh }: Props) {
       const data = await res.json();
       if (res.ok) {
         setMessage({
-          text: data.alreadyExists
+          text: data.triggered
+            ? '⏳ Scrape pokrenuto u pozadini. Osvježi za ~2 minute.'
+            : data.alreadyExists
             ? `Already scraped for ${data.date}`
             : `✓ Saved double for ${data.date} (×${data.totalOdds})`,
-          type: data.alreadyExists ? 'info' : 'success',
+          type: data.triggered ? 'info' : data.alreadyExists ? 'info' : 'success',
         });
-        onRefresh();
+        if (!data.triggered) onRefresh();
       } else {
         setMessage({ text: `Error: ${data.error}`, type: 'error' });
       }
@@ -44,12 +46,14 @@ export function Header({ onRefresh }: Props) {
       const data = await res.json();
       if (res.ok) {
         setMessage({
-          text: data.results.length === 0
+          text: data.triggered
+            ? '⏳ Resolve pokrenuto u pozadini. Osvježi za ~2 minute.'
+            : data.results?.length === 0
             ? 'No pending doubles to resolve.'
-            : `✓ Resolved ${data.results.length} double(s)`,
-          type: 'success',
+            : `✓ Resolved ${data.results?.length} double(s)`,
+          type: data.triggered ? 'info' : 'success',
         });
-        onRefresh();
+        if (!data.triggered) onRefresh();
       } else {
         setMessage({ text: `Error: ${data.error}`, type: 'error' });
       }
