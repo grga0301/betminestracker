@@ -2,7 +2,7 @@
 // Scrapes IceHockeyBet Facebook page using Playwright + login
 import { chromium } from 'playwright';
 
-const FB_PAGE_URL = 'https://www.facebook.com/IceHockeyBet';
+const FB_PAGE_URL = 'https://m.facebook.com/IceHockeyBet';
 
 export interface FbScrapedSelection {
   kickoff: string;
@@ -119,21 +119,24 @@ export async function scrapeFbTicket(): Promise<{
     });
     const page = await context.newPage();
 
-    // ── Login ──────────────────────────────────────────────────────────────
-    console.log('[FB] Logging in...');
-    await page.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await page.waitForTimeout(2000);
+    // ── Login via mobile site (simpler form, works headless on Linux) ───────
+    console.log('[FB] Logging in via m.facebook.com...');
+    await page.goto('https://m.facebook.com/login', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await page.waitForTimeout(1500);
 
-    // Accept cookies if dialog appears
-    const cookieBtn = page.locator('[data-testid="cookie-policy-manage-dialog-accept-button"], [aria-label="Allow all cookies"], button:has-text("Accept all")');
-    if (await cookieBtn.first().isVisible({ timeout: 3000 }).catch(() => false)) {
-      await cookieBtn.first().click();
-      await page.waitForTimeout(1000);
-    }
+    // Accept cookies if present (EU GDPR wall)
+    try {
+      const cookieBtn = page.locator('button[data-cookiebanner="accept_button"], [data-testid="cookie-policy-manage-dialog-accept-button"]');
+      if (await cookieBtn.first().isVisible({ timeout: 3000 })) {
+        await cookieBtn.first().click();
+        await page.waitForTimeout(1000);
+      }
+    } catch {}
 
-    await page.fill('#email', email);
-    await page.fill('#pass', password);
-    await page.click('[name="login"]');
+    await page.waitForSelector('input[name="email"]', { timeout: 15_000 });
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="pass"]', password);
+    await page.click('button[name="login"], input[name="login"]');
     await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {});
     await page.waitForTimeout(3000);
 
@@ -141,22 +144,34 @@ export async function scrapeFbTicket(): Promise<{
     await page.goto(FB_PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     await page.waitForTimeout(4000);
 
-    // Scroll to load a few posts
-    await page.evaluate(() => window.scrollBy(0, 1500));
-    await page.waitForTimeout(2000);
+    // Scroll to load more posts
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => window.scrollBy(0, 1500));
+      await page.waitForTimeout(1500);
+    }
 
     // ── Extract posts ──────────────────────────────────────────────────────
     const posts = await page.evaluate(() => {
       const results: { text: string; postId: string }[] = [];
 
-      // Facebook post containers — find divs with role="article"
-      const articles = Array.from(document.querySelectorAll('[role="article"]'));
-      for (const article of articles) {
-        const text = article.textContent?.trim() ?? '';
-        if (text.length < 20) continue;
+      // Mobile FB: articles or divs containing post text
+      const candidates = Array.from(
+        document.querySelectorAll('article, [role="article"], div[data-ft]')
+      );
 
-        // Try to get post ID from a link inside the article
-        const links = Array.from(article.querySelectorAll('a[href*="/posts/"], a[href*="?story_fbid="], a[href*="permalink"]'));
+      // Fallback: find all divs with substantial text that mention ticket
+      const allDivs = candidates.length > 0 ? candidates : Array.from(document.querySelectorAll('div'));
+
+      for (const el of allDivs) {
+        const text = el.textContent?.trim() ?? '';
+        if (text.length < 50) continue;
+
+        // Only process elements that mention ticket-related content
+        const upper = text.toUpperCase();
+        if (!upper.includes('TODAY TICKET') && !upper.includes('WIN') && !upper.includes('TICKET')) continue;
+
+        // Avoid duplicates by checking if any parent is already in results
+        const links = Array.from(el.querySelectorAll('a[href*="/posts/"], a[href*="story_fbid"], a[href*="permalink"]'));
         let postId = '';
         for (const link of links) {
           const href = link.getAttribute('href') ?? '';
@@ -167,9 +182,11 @@ export async function scrapeFbTicket(): Promise<{
           }
         }
 
-        results.push({ text: text.slice(0, 2000), postId });
+        if (!results.some((r) => r.text === text.slice(0, 2000))) {
+          results.push({ text: text.slice(0, 2000), postId });
+        }
       }
-      return results.slice(0, 15); // Check last 15 posts
+      return results.slice(0, 20);
     });
 
     console.log(`[FB] Found ${posts.length} post(s) to check`);
