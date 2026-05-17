@@ -140,9 +140,29 @@ export async function scrapeFbTicket(): Promise<{
     await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {});
     await page.waitForTimeout(3000);
 
+    // Log post-login URL to detect checkpoint/2FA screens
+    const loginResultUrl = page.url();
+    console.log(`[FB] Post-login URL: ${loginResultUrl}`);
+    const loginPageText = await page.evaluate(() => document.body.innerText ?? '');
+    console.log(`[FB] Post-login page preview: ${loginPageText.slice(0, 300).replace(/\n/g, ' ')}`);
+
+    // Handle "Save your login info?" or checkpoint prompts
+    try {
+      const skipBtn = page.locator('button:has-text("Not now"), button:has-text("Skip"), a:has-text("Not now")');
+      if (await skipBtn.first().isVisible({ timeout: 3000 })) {
+        await skipBtn.first().click();
+        await page.waitForTimeout(1000);
+      }
+    } catch {}
+
     console.log('[FB] Navigating to page...');
-    await page.goto(FB_PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await page.goto(FB_PAGE_URL, { waitUntil: 'networkidle', timeout: 40_000 }).catch(() =>
+      page.goto(FB_PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+    );
     await page.waitForTimeout(4000);
+
+    const pageUrl = page.url();
+    console.log(`[FB] FB page URL: ${pageUrl}`);
 
     // Scroll to load more posts
     for (let i = 0; i < 3; i++) {
@@ -152,7 +172,6 @@ export async function scrapeFbTicket(): Promise<{
 
     // ── Extract posts via full page text (avoids mobile FB DOM quirks) ─────
     const { pageText, postIds } = await page.evaluate(() => {
-      // Collect post IDs from any permalink/story links before stripping DOM
       const links = Array.from(document.querySelectorAll('a[href*="/posts/"], a[href*="story_fbid"], a[href*="permalink"]'));
       const postIds: string[] = [];
       for (const a of links) {
@@ -167,6 +186,7 @@ export async function scrapeFbTicket(): Promise<{
     });
 
     console.log(`[FB] Page text length: ${pageText.length}, post IDs found: ${postIds.length}`);
+    console.log(`[FB] Page text preview: ${pageText.slice(0, 400).replace(/\n/g, ' ')}`);
 
     // Split the full page text into chunks around TODAY TICKET markers
     const posts: { text: string; postId: string }[] = [];
