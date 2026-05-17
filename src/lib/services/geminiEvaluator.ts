@@ -56,7 +56,8 @@ export async function evaluateWithFallback(
   pick?: string,
 ): Promise<'WIN' | 'LOSS' | 'VOID'> {
   const local = evaluateSelection({ market, line, homeScore, awayScore });
-  if (local !== 'VOID') return local;
+  if (local === 'WIN' || local === 'LOSS') return local;
+  if (local !== 'VOID') return 'VOID';
 
   if (!process.env.GEMINI_API_KEY) return 'VOID';
 
