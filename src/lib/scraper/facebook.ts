@@ -19,9 +19,9 @@ export interface FbScrapedTicket {
   selections: FbScrapedSelection[];
 }
 
-// Parse a single match line: "20:00 Al Ahli - Al Fateh 1&2-6 (1.50)✅"
+// Parse a single match line: "20:00 Hannover - Nurnberg 1X&2-5 (1.50)"
 function parseMatchLine(line: string): FbScrapedSelection | null {
-  // Match: TIME  HOME - AWAY  MARKET  (ODD)
+  // Market is always the token just before (ODD) — greedy match away team up to that token
   const m = line.match(
     /^(\d{1,2}:\d{2})\s+(.+?)\s+-\s+(.+?)\s+([\w&+\-\/X12x]+)\s+\((\d+\.\d+)\)/
   );
@@ -150,44 +150,45 @@ export async function scrapeFbTicket(): Promise<{
       await page.waitForTimeout(1500);
     }
 
-    // ── Extract posts ──────────────────────────────────────────────────────
-    const posts = await page.evaluate(() => {
-      const results: { text: string; postId: string }[] = [];
-
-      // Mobile FB: articles or divs containing post text
-      const candidates = Array.from(
-        document.querySelectorAll('article, [role="article"], div[data-ft]')
-      );
-
-      // Fallback: find all divs with substantial text that mention ticket
-      const allDivs = candidates.length > 0 ? candidates : Array.from(document.querySelectorAll('div'));
-
-      for (const el of allDivs) {
-        const text = el.textContent?.trim() ?? '';
-        if (text.length < 50) continue;
-
-        // Only process elements that mention ticket-related content
-        const upper = text.toUpperCase();
-        if (!upper.includes('TODAY TICKET') && !upper.includes('WIN') && !upper.includes('TICKET')) continue;
-
-        // Avoid duplicates by checking if any parent is already in results
-        const links = Array.from(el.querySelectorAll('a[href*="/posts/"], a[href*="story_fbid"], a[href*="permalink"]'));
-        let postId = '';
-        for (const link of links) {
-          const href = link.getAttribute('href') ?? '';
-          const m = href.match(/\/posts\/(\d+)|story_fbid=(\d+)|permalink\/(\d+)/);
-          if (m) {
-            postId = m[1] || m[2] || m[3];
-            break;
-          }
-        }
-
-        if (!results.some((r) => r.text === text.slice(0, 2000))) {
-          results.push({ text: text.slice(0, 2000), postId });
-        }
+    // ── Extract posts via full page text (avoids mobile FB DOM quirks) ─────
+    const { pageText, postIds } = await page.evaluate(() => {
+      // Collect post IDs from any permalink/story links before stripping DOM
+      const links = Array.from(document.querySelectorAll('a[href*="/posts/"], a[href*="story_fbid"], a[href*="permalink"]'));
+      const postIds: string[] = [];
+      for (const a of links) {
+        const href = a.getAttribute('href') ?? '';
+        const m = href.match(/\/posts\/(\d+)|story_fbid=(\d+)|permalink\/(\d+)/);
+        if (m) postIds.push(m[1] || m[2] || m[3]);
       }
-      return results.slice(0, 20);
+      return {
+        pageText: document.body.innerText ?? '',
+        postIds: [...new Set(postIds)],
+      };
     });
+
+    console.log(`[FB] Page text length: ${pageText.length}, post IDs found: ${postIds.length}`);
+
+    // Split the full page text into chunks around TODAY TICKET markers
+    const posts: { text: string; postId: string }[] = [];
+    const upperPage = pageText.toUpperCase();
+    let searchFrom = 0;
+    while (true) {
+      const idx = upperPage.indexOf('TODAY TICKET', searchFrom);
+      if (idx === -1) break;
+      // Take up to 800 chars before and 800 after as the "post" context
+      const start = Math.max(0, idx - 100);
+      const end = Math.min(pageText.length, idx + 800);
+      const chunk = pageText.slice(start, end);
+      posts.push({ text: chunk, postId: postIds[posts.length] ?? '' });
+      searchFrom = idx + 1;
+    }
+
+    // Also check for standalone WIN posts (no TODAY TICKET in them)
+    const winIdx = upperPage.indexOf('#WIIIIIN');
+    if (winIdx !== -1 && posts.length === 0) {
+      const chunk = pageText.slice(Math.max(0, winIdx - 100), Math.min(pageText.length, winIdx + 400));
+      posts.push({ text: chunk, postId: postIds[0] ?? '' });
+    }
 
     console.log(`[FB] Found ${posts.length} post(s) to check`);
 
