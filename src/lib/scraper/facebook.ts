@@ -166,6 +166,11 @@ export async function scrapeFbTicket(): Promise<{
     console.log(`[FB] Page text length: ${pageText.length}, post IDs found: ${postIds.length}`);
     console.log(`[FB] Page text preview: ${pageText.slice(0, 400).replace(/\n/g, ' ')}`);
 
+    // Detect expired/invalid cookies — login wall has <500 chars and no TODAY_TICKET
+    if (pageText.length < 1000 && !pageText.toUpperCase().includes('TODAY')) {
+      throw new Error('FB cookies expired or invalidated — re-export from browser and update FB_COOKIES secret');
+    }
+
     // Find the first (= most recent) TODAY_TICKET post and extract only that post's text
     const upperPage = pageText.toUpperCase();
     const posts: { text: string; postId: string }[] = [];
