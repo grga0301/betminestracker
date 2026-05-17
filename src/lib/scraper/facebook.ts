@@ -85,11 +85,10 @@ export function parseTicketText(text: string, postId: string): FbScrapedTicket |
 }
 
 // Check if a post text is a WIN confirmation
+// Requires the specific #WIIIIIN or POGODAK marker — plain "WIN" is too generic
 function isWinPost(text: string): boolean {
   const upper = text.toUpperCase();
-  const hasTicketMarker = upper.includes('#TODAY_TICKET') || upper.includes('TODAY_TICKET') || upper.includes('TODAY TICKET');
-  const hasWin = upper.includes('WIN') || upper.includes('POGODAK') || upper.includes('WIIIIIN');
-  return hasTicketMarker && hasWin && !upper.includes('VIP WIN');
+  return (upper.includes('WIIIIIN') || upper.includes('POGODAK')) && !upper.includes('VIP WIN');
 }
 
 export async function scrapeFbTicket(): Promise<{
@@ -199,33 +198,33 @@ export async function scrapeFbTicket(): Promise<{
     }
 
     console.log(`[FB] Found ${posts.length} post(s) to check`);
+    if (posts.length > 0) {
+      console.log(`[FB] First chunk preview: ${posts[0].text.slice(0, 300).replace(/\n/g, ' | ')}`);
+    }
 
     let todayTicket: FbScrapedTicket | null = null;
     let isWin: boolean | null = null;
     let winForDate: string | null = null;
 
     for (const post of posts) {
-      // Check for WIN post first
-      if (isWinPost(post.text) && !post.text.toUpperCase().includes('TODAY TICKET:')) {
-        // This is a standalone WIN confirmation — note the date (today)
-        isWin = true;
-        winForDate = new Date().toISOString().split('T')[0];
-        console.log('[FB] Found WIN confirmation post');
-        continue;
-      }
-
-      // Try parse as ticket
+      // Always try to parse as a ticket first
       const ticket = parseTicketText(post.text, post.postId);
       if (ticket) {
         todayTicket = ticket;
         console.log(`[FB] Found TODAY TICKET: ${ticket.selections.length} selections, odds ${ticket.totalOdds}`);
-
-        // Check if this same post also has WIN in it (i.e. it's a recap post)
+        // Check if a WIN confirmation is also visible on the same page chunk
         if (isWinPost(post.text)) {
           isWin = true;
           winForDate = ticket.date;
         }
         break;
+      }
+
+      // Not a ticket — check if it's a standalone WIN confirmation
+      if (isWinPost(post.text)) {
+        isWin = true;
+        winForDate = new Date().toISOString().split('T')[0];
+        console.log('[FB] Found WIN confirmation post');
       }
     }
 
