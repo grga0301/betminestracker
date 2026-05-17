@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
 import { evaluateDouble } from '../src/lib/services/resultEvaluator';
 import { evaluateWithFallback } from '../src/lib/services/geminiEvaluator';
+import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { sendTelegramMessage } from '../src/lib/services/telegramService';
 
 type DailyResult = { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number };
@@ -104,6 +105,15 @@ async function main() {
               console.log(`     Attempt ${attempt} returned no usable score, retrying in 3s...`);
               await sleep(3000);
             }
+          }
+        }
+
+        if (!score) {
+          // 3. Fallback: TheSportsDB + ESPN + SofaScore
+          console.log(`     Trying TheSportsDB / ESPN / SofaScore...`);
+          score = await fetchScoreFromSportsDB(sel.homeTeam, sel.awayTeam, double.date);
+          if (score) {
+            console.log(`     ✓ External API: ${score.homeScore}-${score.awayScore}`);
           }
         }
 
