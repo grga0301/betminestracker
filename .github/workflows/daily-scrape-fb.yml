@@ -27,5 +27,4 @@ jobs:
         run: npm run scrape:fb
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          FB_EMAIL: ${{ secrets.FB_EMAIL }}
-          FB_PASSWORD: ${{ secrets.FB_PASSWORD }}
+          FB_COOKIES: ${{ secrets.FB_COOKIES }}

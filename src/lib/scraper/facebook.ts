@@ -99,11 +99,16 @@ export async function scrapeFbTicket(): Promise<{
   isWin: boolean | null;
   winForDate: string | null;
 }> {
-  const email = process.env.FB_EMAIL;
-  const password = process.env.FB_PASSWORD;
+  const cookiesJson = process.env.FB_COOKIES;
+  if (!cookiesJson) {
+    throw new Error('FB_COOKIES environment variable required (export cookies from logged-in browser)');
+  }
 
-  if (!email || !password) {
-    throw new Error('FB_EMAIL and FB_PASSWORD environment variables required');
+  let cookies: object[];
+  try {
+    cookies = JSON.parse(cookiesJson);
+  } catch {
+    throw new Error('FB_COOKIES is not valid JSON');
   }
 
   const browser = await chromium.launch({
@@ -117,48 +122,15 @@ export async function scrapeFbTicket(): Promise<{
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
       locale: 'en-US',
     });
+
+    // ── Load saved session cookies (no login / no 2FA needed) ────────────
+    await context.addCookies(cookies as Parameters<typeof context.addCookies>[0]);
+    console.log(`[FB] Loaded ${cookies.length} cookies — skipping login`);
+
     const page = await context.newPage();
 
-    // ── Login via mobile site (simpler form, works headless on Linux) ───────
-    console.log('[FB] Logging in via m.facebook.com...');
-    await page.goto('https://m.facebook.com/login', { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await page.waitForTimeout(1500);
-
-    // Accept cookies if present (EU GDPR wall)
-    try {
-      const cookieBtn = page.locator('button[data-cookiebanner="accept_button"], [data-testid="cookie-policy-manage-dialog-accept-button"]');
-      if (await cookieBtn.first().isVisible({ timeout: 3000 })) {
-        await cookieBtn.first().click();
-        await page.waitForTimeout(1000);
-      }
-    } catch {}
-
-    await page.waitForSelector('input[name="email"]', { timeout: 15_000 });
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="pass"]', password);
-    await page.keyboard.press('Enter');
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {});
-    await page.waitForTimeout(3000);
-
-    // Log post-login URL to detect checkpoint/2FA screens
-    const loginResultUrl = page.url();
-    console.log(`[FB] Post-login URL: ${loginResultUrl}`);
-    const loginPageText = await page.evaluate(() => document.body.innerText ?? '');
-    console.log(`[FB] Post-login page preview: ${loginPageText.slice(0, 300).replace(/\n/g, ' ')}`);
-
-    // Handle "Save your login info?" or checkpoint prompts
-    try {
-      const skipBtn = page.locator('button:has-text("Not now"), button:has-text("Skip"), a:has-text("Not now")');
-      if (await skipBtn.first().isVisible({ timeout: 3000 })) {
-        await skipBtn.first().click();
-        await page.waitForTimeout(1000);
-      }
-    } catch {}
-
     console.log('[FB] Navigating to page...');
-    await page.goto(FB_PAGE_URL, { waitUntil: 'networkidle', timeout: 40_000 }).catch(() =>
-      page.goto(FB_PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 })
-    );
+    await page.goto(FB_PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 40_000 });
     await page.waitForTimeout(4000);
 
     const pageUrl = page.url();
