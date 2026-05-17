@@ -39,6 +39,28 @@ model BetSelection {
   updatedAt    DateTime  @updatedAt
 }
 
+model FbTicket {
+  id         Int           @id @default(autoincrement())
+  date       String        @unique
+  postId     String?
+  totalOdds  Float
+  status     String        @default("PENDING")
+  scrapedAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  selections FbSelection[]
+}
+
+model FbSelection {
+  id       Int      @id @default(autoincrement())
+  ticketId Int
+  ticket   FbTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  kickoff  String
+  homeTeam String
+  awayTeam String
+  market   String
+  odd      Float
+}
+
 model FstTip {
   id        Int      @id @default(autoincrement())
   date      String   @unique

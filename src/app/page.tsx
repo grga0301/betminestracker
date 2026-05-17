@@ -6,6 +6,7 @@ import { Header } from '@/components/Header';
 import { StatsBar } from '@/components/StatsBar';
 import { DoubleCard } from '@/components/DoubleCard';
 import { FstSection } from '@/components/FstSection';
+import { FbSection } from '@/components/FbSection';
 import type { DoubleRecord, Stats } from '@/lib/types';
 
 const DEFAULT_STATS: Stats = {
@@ -117,6 +118,9 @@ export default function HomePage() {
 
         {/* FreeSuperTips section — always shown */}
         <FstSection />
+
+        {/* Facebook IceHockeyBet section — always shown */}
+        <FbSection />
 
         {!loading && !error && doubles.length === 0 && (
           <div className="pb-12" />
