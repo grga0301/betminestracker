@@ -4,7 +4,7 @@ import { getPendingFstTips, updateFstTipResult, getAllFstTips } from '../src/lib
 import { sendTelegramMessage } from '../src/lib/services/telegramService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
-import { evaluateSelection } from '../src/lib/services/resultEvaluator';
+import { evaluateWithFallback } from '../src/lib/services/geminiEvaluator';
 
 function normalizeTeam(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -94,12 +94,15 @@ async function main() {
       continue;
     }
 
-    const status = evaluateSelection({
-      market: tip.market,
-      line: null,
-      homeScore: score.homeScore,
-      awayScore: score.awayScore,
-    });
+    const status = await evaluateWithFallback(
+      tip.market,
+      tip.homeTeam,
+      tip.awayTeam,
+      score.homeScore,
+      score.awayScore,
+      null,
+      tip.pick,
+    );
 
     await updateFstTipResult(tip.id, score.homeScore, score.awayScore, status);
 

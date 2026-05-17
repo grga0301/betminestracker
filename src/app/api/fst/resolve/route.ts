@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { getPendingFstTips, updateFstTipResult, getAllFstTips } from '@/lib/services/fstService';
 import { fetchScoreFromSportsDB } from '@/lib/services/fstResultFetcher';
-import { evaluateSelection } from '@/lib/services/resultEvaluator';
+import { evaluateWithFallback } from '@/lib/services/geminiEvaluator';
 
 export async function POST() {
   try {
@@ -23,12 +23,15 @@ export async function POST() {
         continue;
       }
 
-      const status = evaluateSelection({
-        market: tip.market,
-        line: null,
-        homeScore: score.homeScore,
-        awayScore: score.awayScore,
-      });
+      const status = await evaluateWithFallback(
+        tip.market,
+        tip.homeTeam,
+        tip.awayTeam,
+        score.homeScore,
+        score.awayScore,
+        null,
+        tip.pick,
+      );
 
       await updateFstTipResult(tip.id, score.homeScore, score.awayScore, status);
       results.push({

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPendingFtTips, updateFtTipResult, getAllFtTips } from '@/lib/services/ftService';
 import { fetchScoreFromSportsDB } from '@/lib/services/fstResultFetcher';
-import { evaluateWithGemini } from '@/lib/services/geminiEvaluator';
+import { evaluateWithFallback } from '@/lib/services/geminiEvaluator';
 
 export async function POST() {
   try {
@@ -21,13 +21,14 @@ export async function POST() {
         continue;
       }
 
-      const status = await evaluateWithGemini(
+      const status = await evaluateWithFallback(
         tip.market,
-        tip.pick,
         tip.homeTeam,
         tip.awayTeam,
         score.homeScore,
         score.awayScore,
+        null,
+        tip.pick,
       );
 
       await updateFtTipResult(tip.id, status, score.homeScore, score.awayScore);

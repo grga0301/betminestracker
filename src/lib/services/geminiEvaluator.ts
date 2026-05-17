@@ -1,6 +1,8 @@
 // Evaluates bet outcomes using Google Gemini Flash (free tier)
 // Handles complex combined markets like "Away Win & BTTS", "Home Win & Over 2.5", etc.
 
+import { evaluateSelection } from './resultEvaluator';
+
 export async function evaluateWithGemini(
   market: string,
   pick: string,
@@ -40,4 +42,24 @@ export async function evaluateWithGemini(
   if (answer.startsWith('WIN')) return 'WIN';
   if (answer.startsWith('LOSS')) return 'LOSS';
   return 'VOID';
+}
+
+// Tries local rule-based evaluation first; falls back to Gemini only for unknown markets.
+// pick defaults to market when not available as a separate field (e.g. BetMines).
+export async function evaluateWithFallback(
+  market: string,
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: number,
+  awayScore: number,
+  line: number | null = null,
+  pick?: string,
+): Promise<'WIN' | 'LOSS' | 'VOID'> {
+  const local = evaluateSelection({ market, line, homeScore, awayScore });
+  if (local !== 'VOID') return local;
+
+  if (!process.env.GEMINI_API_KEY) return 'VOID';
+
+  console.log(`  🤖 Unknown market "${market}" — falling back to Gemini...`);
+  return evaluateWithGemini(market, pick ?? market, homeTeam, awayTeam, homeScore, awayScore);
 }

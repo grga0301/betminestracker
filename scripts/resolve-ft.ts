@@ -2,7 +2,7 @@
 import { getPendingFtTips, updateFtTipResult, getAllFtTips } from '../src/lib/services/ftService';
 import { sendTelegramMessage } from '../src/lib/services/telegramService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
-import { evaluateWithGemini } from '../src/lib/services/geminiEvaluator';
+import { evaluateWithFallback } from '../src/lib/services/geminiEvaluator';
 
 async function main() {
   console.log('╔════════════════════════════════════════╗');
@@ -30,13 +30,14 @@ async function main() {
       continue;
     }
 
-    const status = await evaluateWithGemini(
+    const status = await evaluateWithFallback(
       tip.market,
-      tip.pick,
       tip.homeTeam,
       tip.awayTeam,
       score.homeScore,
       score.awayScore,
+      null,
+      tip.pick,
     );
 
     await updateFtTipResult(tip.id, status, score.homeScore, score.awayScore);

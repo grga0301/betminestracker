@@ -4,7 +4,8 @@
 
 import { PrismaClient } from '@prisma/client';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
-import { evaluateSelection, evaluateDouble } from '../src/lib/services/resultEvaluator';
+import { evaluateDouble } from '../src/lib/services/resultEvaluator';
+import { evaluateWithFallback } from '../src/lib/services/geminiEvaluator';
 import { sendTelegramMessage } from '../src/lib/services/telegramService';
 
 type DailyResult = { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number };
@@ -111,12 +112,14 @@ async function main() {
           continue;
         }
 
-        const resultStatus = evaluateSelection({
-          market: sel.market,
-          line: sel.line,
-          homeScore: score.homeScore,
-          awayScore: score.awayScore,
-        });
+        const resultStatus = await evaluateWithFallback(
+          sel.market,
+          sel.homeTeam,
+          sel.awayTeam,
+          score.homeScore,
+          score.awayScore,
+          sel.line,
+        );
 
         await prisma.betSelection.update({
           where: { id: sel.id },
