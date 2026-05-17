@@ -65,7 +65,7 @@ export function FtSection() {
       const data = await res.json();
       if (res.ok) {
         setMsg({ text: `✓ ${data.message}`, type: 'success' });
-        fetchTips();
+        setTimeout(fetchTips, 90_000);
       } else {
         setMsg({ text: `Error: ${data.error}`, type: 'error' });
       }
