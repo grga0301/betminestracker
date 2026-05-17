@@ -15,6 +15,7 @@ prisma/*.db
 prisma/*.db-journal
 
 # Environment
+.env
 .env.local
 .env.*.local
 
