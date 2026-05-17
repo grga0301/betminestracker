@@ -57,17 +57,15 @@ export function parseTicketText(text: string, postId: string): FbScrapedTicket |
   let totalOdds = 0;
 
   for (const line of lines) {
-    // Match line
-    const sel = parseMatchLine(line);
-    if (sel) {
-      selections.push(sel);
-      continue;
-    }
-    // Total odds line: "ODD: 3.11"
+    // Total odds line marks end of this post's selections
     const oddLine = line.match(/^ODD[:\s]+(\d+\.\d+)/i);
     if (oddLine) {
       totalOdds = parseFloat(oddLine[1]);
+      break; // stop here — anything after is from the next post
     }
+    // Match line
+    const sel = parseMatchLine(line);
+    if (sel) selections.push(sel);
   }
 
   if (selections.length === 0) return null;
@@ -168,30 +166,29 @@ export async function scrapeFbTicket(): Promise<{
     console.log(`[FB] Page text length: ${pageText.length}, post IDs found: ${postIds.length}`);
     console.log(`[FB] Page text preview: ${pageText.slice(0, 400).replace(/\n/g, ' ')}`);
 
-    // Split the full page text into chunks around TODAY TICKET markers
-    // Posts use #TODAY_TICKET (underscore) — search both variants
-    const posts: { text: string; postId: string }[] = [];
+    // Find the first (= most recent) TODAY_TICKET post and extract only that post's text
     const upperPage = pageText.toUpperCase();
-    const MARKERS = ['TODAY_TICKET', 'TODAY TICKET'];
-    const foundStarts = new Set<number>();
+    const posts: { text: string; postId: string }[] = [];
 
-    for (const marker of MARKERS) {
-      let searchFrom = 0;
-      while (true) {
-        const idx = upperPage.indexOf(marker, searchFrom);
-        if (idx === -1) break;
-        const start = Math.max(0, idx - 100);
-        if (!foundStarts.has(start)) {
-          foundStarts.add(start);
-          const end = Math.min(pageText.length, idx + 800);
-          posts.push({ text: pageText.slice(start, end), postId: postIds[posts.length] ?? '' });
-        }
-        searchFrom = idx + 1;
-      }
+    const firstIdx = upperPage.search(/TODAY[_ ]TICKET/);
+    if (firstIdx !== -1) {
+      // End the chunk at the next TODAY_TICKET occurrence (= next post), or 900 chars max
+      // Find next occurrence after firstIdx
+      const afterFirst = upperPage.indexOf('TODAY_TICKET', firstIdx + 1);
+      const afterFirstB = upperPage.indexOf('TODAY TICKET', firstIdx + 1);
+      const nextOccurrence = Math.min(
+        afterFirst === -1 ? Infinity : afterFirst,
+        afterFirstB === -1 ? Infinity : afterFirstB
+      );
+      const end = nextOccurrence === Infinity
+        ? Math.min(pageText.length, firstIdx + 900)
+        : nextOccurrence;
+
+      posts.push({ text: pageText.slice(firstIdx, end), postId: postIds[0] ?? '' });
     }
 
-    // Also check for standalone WIN posts
-    const winIdx = upperPage.indexOf('#WIIIIIN');
+    // Also check for standalone WIN post if no ticket found
+    const winIdx = upperPage.indexOf('WIIIIIN');
     if (winIdx !== -1 && posts.length === 0) {
       const chunk = pageText.slice(Math.max(0, winIdx - 100), Math.min(pageText.length, winIdx + 400));
       posts.push({ text: chunk, postId: postIds[0] ?? '' });
