@@ -89,8 +89,14 @@ export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
     return null;
   }
 
-  // Kickoff
-  const kickoff = leg.querySelector('time')?.text.trim() ?? '';
+  // Kickoff — FreeSuperTips uses UK time (GMT/BST), we display in CET (+2h)
+  const rawKickoff = leg.querySelector('time')?.text.trim() ?? '';
+  const kickoff = (() => {
+    const m = rawKickoff.match(/(\d{1,2}):(\d{2})/);
+    if (!m) return rawKickoff;
+    const h = (parseInt(m[1]) + 2) % 24;
+    return `${String(h).padStart(2, '0')}:${m[2]}`;
+  })();
 
   // Pick and home team
   const pick = leg.querySelector('.Leg__win')?.text.trim() ?? '';
