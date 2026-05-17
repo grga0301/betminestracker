@@ -104,12 +104,23 @@ export async function scrapeFbTicket(): Promise<{
     throw new Error('FB_COOKIES environment variable required (export cookies from logged-in browser)');
   }
 
-  let cookies: object[];
+  let rawCookies: Record<string, unknown>[];
   try {
-    cookies = JSON.parse(cookiesJson);
+    rawCookies = JSON.parse(cookiesJson);
   } catch {
     throw new Error('FB_COOKIES is not valid JSON');
   }
+
+  // Normalize sameSite to values Playwright accepts (Strict | Lax | None)
+  const sameSiteMap: Record<string, 'Strict' | 'Lax' | 'None'> = {
+    strict: 'Strict', lax: 'Lax', none: 'None',
+    no_restriction: 'None', unspecified: 'Lax',
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cookies = rawCookies.map((c) => ({
+    ...c,
+    sameSite: sameSiteMap[(String(c.sameSite ?? '')).toLowerCase()] ?? 'Lax',
+  })) as any[];
 
   const browser = await chromium.launch({
     headless: true,
@@ -124,7 +135,7 @@ export async function scrapeFbTicket(): Promise<{
     });
 
     // ── Load saved session cookies (no login / no 2FA needed) ────────────
-    await context.addCookies(cookies as Parameters<typeof context.addCookies>[0]);
+    await context.addCookies(cookies);
     console.log(`[FB] Loaded ${cookies.length} cookies — skipping login`);
 
     const page = await context.newPage();
