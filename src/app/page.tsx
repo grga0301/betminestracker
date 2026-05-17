@@ -7,6 +7,7 @@ import { StatsBar } from '@/components/StatsBar';
 import { DoubleCard } from '@/components/DoubleCard';
 import { FstSection } from '@/components/FstSection';
 import { FbSection } from '@/components/FbSection';
+import { FtSection } from '@/components/FtSection';
 import type { DoubleRecord, Stats } from '@/lib/types';
 
 const DEFAULT_STATS: Stats = {
@@ -118,6 +119,9 @@ export default function HomePage() {
 
         {/* FreeSuperTips section — always shown */}
         <FstSection />
+
+        {/* FreeTips.com section — always shown */}
+        <FtSection />
 
         {/* Facebook IceHockeyBet section — always shown */}
         <FbSection />

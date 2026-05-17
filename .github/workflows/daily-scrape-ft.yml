@@ -1,0 +1,25 @@
+name: Daily Scrape FreeTips
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour at :00
+  workflow_dispatch:
+
+jobs:
+  scrape-ft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Scrape FreeTips.com Bet of the Day
+        run: npm run scrape:ft
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

@@ -76,3 +76,19 @@ model FstTip {
   scrapedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model FtTip {
+  id        Int      @id @default(autoincrement())
+  date      String   @unique
+  homeTeam  String
+  awayTeam  String
+  pick      String
+  market    String
+  kickoff   String
+  odd       Float    @default(0)
+  status    String   @default("PENDING")
+  homeScore Int?
+  awayScore Int?
+  scrapedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

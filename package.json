@@ -12,6 +12,8 @@
     "scrape:fst": "tsx scripts/scrape-fst.ts",
     "resolve:fst": "tsx scripts/resolve-fst.ts",
     "scrape:fb": "tsx scripts/scrape-fb.ts",
+    "scrape:ft": "tsx scripts/scrape-ft.ts",
+    "resolve:ft": "tsx scripts/resolve-ft.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",

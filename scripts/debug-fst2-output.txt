@@ -1,0 +1,163 @@
+{
+  "h2s": [
+    {
+      "text": "Bet of the Day Tip",
+      "parentClass": "Header TipHeader TipHeader--logo",
+      "parentTag": "HEADER",
+      "parentHTML": "<header class=\"Header TipHeader TipHeader--logo\"><h2>Bet of the Day Tip</h2></header>"
+    },
+    {
+      "text": "MLS Best Bet Tip",
+      "parentClass": "Header TipHeader TipHeader--logo",
+      "parentTag": "HEADER",
+      "parentHTML": "<header class=\"Header TipHeader TipHeader--logo\"><h2>MLS Best Bet Tip</h2></header>"
+    },
+    {
+      "text": "Football Tips",
+      "parentClass": "Header",
+      "parentTag": "HEADER",
+      "parentHTML": "<header class=\"Header\"><h2>Football Tips</h2><a class=\"SeeAll\" href=\"/free-football-betting-tips/\">See All</a></header>"
+    },
+    {
+      "text": "Featured Matches",
+      "parentClass": "Header",
+      "parentTag": "HEADER",
+      "parentHTML": "<header class=\"Header\"><h2>Featured Matches</h2><a class=\"SeeAll\" href=\"/predictions/\">See All</a></header>"
+    },
+    {
+      "text": "Bet of the Day FAQs",
+      "parentClass": "Card Card--padd",
+      "parentTag": "DIV",
+      "parentHTML": "<div class=\"Card Card--padd\"><h2>Bet of the Day FAQs</h2><div class=\"Wysiwyg\"><h3>What is the football Bet of the Day?</h3><p><span>Bet of the Day is our most confident bet from the day’s football fixtures. Our expert football tipsters look through all their tips and choose their best tip of the day. It’s something we consider the ‘banker’ bet for the day. It is picked it out as a single, meaning your chances of winning are as high as possible.</span></p>\n<h3>How often does Bet of the Day win?</h3><p><span>As with all types of football betting, results will vary. But as this is our most confident bet, and one we consider our best tip of the day, we hope the chances of winning are higher than normal. As it is picked out as a single, the odds are also much shorter than many types of bet, suc"
+    },
+    {
+      "text": "Best Football NAP of the day",
+      "parentClass": "Wysiwyg",
+      "parentTag": "DIV",
+      "parentHTML": "<div class=\"Wysiwyg\"><h2>Best Football NAP of the day</h2>\n<p>Our football bet of the day can also be referred to as the football nap of the day. This simply means it’s our best selection for the day’s football – our experts’ favourite bet.</p>\n<h2><span>More Football Betting Tips</span></h2>\n<p><span>We offer plenty more than just the Bet of the Day! Check out our full range of free football tips here:</span></p>\n<ul>\n<li><a href=\"/accumulator-tips/\"><span>Accumulator Tips</span></a></li>\n<li><a href=\"/both-teams-to-score-tips/\"><span>Both Teams To Score Tips</span></a></li>\n<li><a href=\"/over-2-5-goals-betting-tips-and-predictions/\"><span>Over 2.5 Goals Tips</span></a></li>\n<li><a href=\"/correct-score-double-tips/\"><span>Correct Score Tips</span></a></li>\n<li><a href=\"/anytime-goalscorer"
+    },
+    {
+      "text": "More Football Betting Tips",
+      "parentClass": "Wysiwyg",
+      "parentTag": "DIV",
+      "parentHTML": "<div class=\"Wysiwyg\"><h2>Best Football NAP of the day</h2>\n<p>Our football bet of the day can also be referred to as the football nap of the day. This simply means it’s our best selection for the day’s football – our experts’ favourite bet.</p>\n<h2><span>More Football Betting Tips</span></h2>\n<p><span>We offer plenty more than just the Bet of the Day! Check out our full range of free football tips here:</span></p>\n<ul>\n<li><a href=\"/accumulator-tips/\"><span>Accumulator Tips</span></a></li>\n<li><a href=\"/both-teams-to-score-tips/\"><span>Both Teams To Score Tips</span></a></li>\n<li><a href=\"/over-2-5-goals-betting-tips-and-predictions/\"><span>Over 2.5 Goals Tips</span></a></li>\n<li><a href=\"/correct-score-double-tips/\"><span>Correct Score Tips</span></a></li>\n<li><a href=\"/anytime-goalscorer"
+    },
+    {
+      "text": "Follow us on Twitter!",
+      "parentClass": "Wysiwyg",
+      "parentTag": "DIV",
+      "parentHTML": "<div class=\"Wysiwyg\"><h2>Best Football NAP of the day</h2>\n<p>Our football bet of the day can also be referred to as the football nap of the day. This simply means it’s our best selection for the day’s football – our experts’ favourite bet.</p>\n<h2><span>More Football Betting Tips</span></h2>\n<p><span>We offer plenty more than just the Bet of the Day! Check out our full range of free football tips here:</span></p>\n<ul>\n<li><a href=\"/accumulator-tips/\"><span>Accumulator Tips</span></a></li>\n<li><a href=\"/both-teams-to-score-tips/\"><span>Both Teams To Score Tips</span></a></li>\n<li><a href=\"/over-2-5-goals-betting-tips-and-predictions/\"><span>Over 2.5 Goals Tips</span></a></li>\n<li><a href=\"/correct-score-double-tips/\"><span>Correct Score Tips</span></a></li>\n<li><a href=\"/anytime-goalscorer"
+    },
+    {
+      "text": "Free Bets and Offers",
+      "parentClass": "Header",
+      "parentTag": "HEADER",
+      "parentHTML": "<header class=\"Header\"><h2>Free Bets and Offers</h2><a class=\"SeeAll\" href=\"/free-bets/\">See All</a></header>"
+    }
+  ],
+  "legs": [
+    {
+      "html": "<div class=\"Leg\"><div role=\"button\" class=\"Exp Exp--arrow Leg__inner\"><div class=\"Leg__teams\"><time>16:00</time><div class=\"Teams\"><div class=\"Img Team Team--xs\" style=\"background-image:url(&quot;/wp-content/themes/freesupertips/image/team/Chelsea.png&quot;)\"></div><div class=\"Img Team Team--xs\" style=\"background-image:url(&quot;/wp-content/themes/freesupertips/image/team/Manchester City.png&quot;)\"></div></div></div><div class=\"Leg__title\"><div class=\"Leg__win\">Manchester City to Win</div><div class=\"Leg__lose\">at Chelsea</div></div></div><div class=\"Exp-collapse\" style=\"max-height:0\"><div class=\"TipReason\"><div class=\"TipReason__header\"><div class=\"TipReason__title\">Reason for tip</div><a class=\"TextLink TipReason__link MoreArrow MoreArrow--Inline\" href=\"/predictions/chelsea-vs-manchester-city-predictions-betting-tips-match-previews/\">View Full Preview </a></div><div class=\"TipReason__body\"><p>Man City&nbsp;overcame Crystal Palace 3-0 on Wednesday to extend their unbeaten streak to n",
+      "text": "16:00Manchester City to Winat ChelseaReason for tipView Full Preview Man City overcame Crystal Palace 3-0 on Wednesday to extend their unbeaten streak to nine games across all competitions, with eight wins, and they face a Chelsea side who are out of form. Chelsea have four defeats and just one win "
+    },
+    {
+      "html": "<div class=\"Leg\"><div role=\"button\" class=\"Exp Exp--arrow Leg__inner\"><div class=\"Leg__teams\"><time>02:30</time><div class=\"Teams\"><div class=\"Img Team Team--xs\" style=\"background-image:url(&quot;/wp-content/themes/freesupertips/image/team/Houston Dynamo.png&quot;)\"></div><div class=\"Img Team Team--xs\" style=\"background-image:url(&quot;/wp-content/themes/freesupertips/image/team/Vancouver Whitecaps.png&quot;)\"></div></div></div><div class=\"Leg__title\"><div class=\"Leg__win\">Vancouver Whitecaps to Win</div><div class=\"Leg__lose\">at Houston Dynamo</div></div></div><div class=\"Exp-collapse\" style=\"max-height:0\"><div class=\"TipReason\"><div class=\"TipReason__header\"><div class=\"TipReason__title\">Reason for tip</div></div><div class=\"TipReason__body\"><p>Houston Dynamo have been fairly solid at home but may struggle to contain Vancouver Whitecaps, who are fancied to get the victory. The visitors have won nine of their 12 games this season and only one team in the West has a better defensive re",
+      "text": "02:30Vancouver Whitecaps to Winat Houston DynamoReason for tipHouston Dynamo have been fairly solid at home but may struggle to contain Vancouver Whitecaps, who are fancied to get the victory. The visitors have won nine of their 12 games this season and only one team in the West has a better defensi"
+    }
+  ],
+  "tipCells": [
+    {
+      "html": "<a class=\"TipCell\" href=\"/both-teams-to-score-and-win-accumulator/\"><ul class=\"Bullets TipCell__stats\"><li>Tomorrow</li><li>01:30</li></ul><div class=\"TipCell__title\">MLS Both Teams to Score &amp; Win Double Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£115.20</span></div></a>",
+      "text": "Tomorrow01:30MLS Both Teams to Score & Win Double Tip£10 returns £115.20"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/accumulator-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Tomorrow</li><li>01:30</li></ul><div class=\"TipCell__title\">MLS Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£170.80</span></div></a>",
+      "text": "Tomorrow01:30MLS Accumulator Tip£10 returns £170.80"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/accumulator-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Tomorrow</li><li>01:30</li></ul><div class=\"TipCell__title\">MLS Mega Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£1.093.10</span></div></a>",
+      "text": "Tomorrow01:30MLS Mega Accumulator Tip£10 returns £1.093.10"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/bet-builder-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Tomorrow</li><li>15:00</li></ul><div class=\"TipCell__title\">Newcastle vs West Ham Ultimate Bet Builder Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£276.90</span></div></a>",
+      "text": "Tomorrow15:00Newcastle vs West Ham Ultimate Bet Builder Tip£10 returns £276.90"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/accumulator-tips/\"><ul class=\"Bullets TipCell__stats\"><li>12 May</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Weekly Top 10 Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£4.974.00</span></div></a>",
+      "text": "12 MayInPlayWeekly Top 10 Accumulator Tip£10 returns £4.974.00"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/correct-score-double-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Correct Score Double Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£1.105.00</span></div></a>",
+      "text": "TodayInPlayCorrect Score Double Tip£10 returns £1.105.00"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/accumulator-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Double Chance Treble Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£111.80</span></div></a>",
+      "text": "TodayInPlayDouble Chance Treble Tip£10 returns £111.80"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/anytime-goalscorer-predictions-betting-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Bet to Net Treble Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£105.00</span></div></a>",
+      "text": "TodayInPlayBet to Net Treble Tip£10 returns £105.00"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/over-2-5-goals-betting-tips-and-predictions/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Goals Galore Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£81.70</span></div></a>",
+      "text": "TodayInPlayGoals Galore Accumulator Tip£10 returns £81.70"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/accumulator-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Win Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£226.50</span></div></a>",
+      "text": "TodayInPlayWin Accumulator Tip£10 returns £226.50"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/accumulator-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Super Mega Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£881.70</span></div></a>",
+      "text": "TodayInPlaySuper Mega Accumulator Tip£10 returns £881.70"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/both-teams-to-score-and-win-accumulator/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Both Teams to Score &amp; Win Treble Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£257.80</span></div></a>",
+      "text": "TodayInPlayBoth Teams to Score & Win Treble Tip£10 returns £257.80"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/both-teams-to-score-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Both Teams to Score Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£70.80</span></div></a>",
+      "text": "TodayInPlayBoth Teams to Score Accumulator Tip£10 returns £70.80"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/anytime-goalscorer-predictions-betting-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Bet to Net Best Bet Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£20</span> returns <span class=\"TipCell__bet--strong\">£34.00</span></div></a>",
+      "text": "TodayInPlayBet to Net Best Bet Tip£20 returns £34.00"
+    },
+    {
+      "html": "<a class=\"TipCell\" href=\"/accumulator-tips/\"><ul class=\"Bullets TipCell__stats\"><li>Today</li><li class=\"inPlay\">InPlay</li></ul><div class=\"TipCell__title\">Evening Accumulator Tip</div><div class=\"TipCell__bet\"><span class=\"TipCell__bet--strong\">£10</span> returns <span class=\"TipCell__bet--strong\">£135.70</span></div></a>",
+      "text": "TodayInPlayEvening Accumulator Tip£10 returns £135.70"
+    },
+    {
+      "html": "<div class=\"TipCell TipCell--seeAll mobileHide\"><a class=\"SeeAll SeeAll--fill\" href=\"/free-football-betting-tips/\">See All Football Tips</a></div>",
+      "text": "See All Football Tips"
+    }
+  ],
+  "ancestorDump": "\n--- Level 1: <header class=\"Header TipHeader TipHeader--logo\">\n<header class=\"Header TipHeader TipHeader--logo\"><h2>Bet of the Day Tip</h2></header>\n\n--- Level 2: <div class=\"Card\">\n<div class=\"Card\"><header class=\"Header TipHeader TipHeader--logo\"><h2>Bet of the Day Tip</h2></header><div class=\"Leg\"><div role=\"button\" class=\"Exp Exp--arrow Leg__inner\"><div class=\"Leg__teams\"><time>16:00</time><div class=\"Teams\"><div class=\"Img Team Team--xs\" style=\"background-image:url(&quot;/wp-content/themes/freesupertips/image/team/Chelsea.png&quot;)\"></div><div class=\"Img Team Team--xs\" style=\"background-image:url(&quot;/wp-content/themes/freesupertips/image/team/Manchester City.png&quot;)\"></div></div></div><div class=\"Leg__title\"><div class=\"Leg__win\">Manchester City to Win</div><d\n\n--- Level 3: <main class=\"Main Main--sidebar\">\n<main class=\"Main Main--sidebar\"><div class=\"PageIntro\"><h1>Football Bet of the Day</h1><p><span>Welcome! Our expert tipsters analyze statistics, form and other trends to give you the best tips possible – just look at our </span><a href=\"/predictions/\"><span>match predictions</span></a><span> to see the level of detail we go into. Good luck!</span></p>\n</div><div class=\"Card\"><header class=\"Header TipHeader TipHeader--logo\"><h2>Bet of the Day Tip</h2></header><div class=\"Leg\"><div role=\"button\" class=\"Exp Exp--arrow Leg__inner\"><div class=\"Leg__teams\"><time>16:00</time><div class=\"Teams\"><div \n\n--- Level 4: <div class=\"\">\n<div id=\"__next\"><div class=\"CookieCompliance\" id=\"consent_blackbar\" lang=\"en\">\n            <style>\n                .ta-hide {\n                    visibility: hidden !important;\n                    opacity: 0 !important;\n                    transition: opacity 300ms ease-in, visibility 0s ease-in 300ms;\n                }\n                .ta-display-hide {\n                    display: none !important;\n                }\n                .ta-show {\n                    visibility: visible !important;\n                    opacity: 1 !important;\n                }\n            </style>\n            <styl\n\n--- Level 5: <body class=\"fonts-loaded\">\n<body class=\"fonts-loaded\"><div id=\"__next\"><div class=\"CookieCompliance\" id=\"consent_blackbar\" lang=\"en\">\n            <style>\n                .ta-hide {\n                    visibility: hidden !important;\n                    opacity: 0 !important;\n                    transition: opacity 300ms ease-in, visibility 0s ease-in 300ms;\n                }\n                .ta-display-hide {\n                    display: none !important;\n                }\n                .ta-show {\n                    visibility: visible !important;\n                    opacity: 1 !important;\n                }\n           \n\n--- Level 6: <html class=\"\">\n<html lang=\"en\"><head><style type=\"text/css\">@font-face {font-family: \"Source Sans Pro\";src: url(https://consent.trustarc.com/get?name=SourceSansPro-Regular.woff2) format(\"woff2\");}.truste_cursor_pointer {cursor: pointer;}.truste_border_none {border: none;}.truste_accessible_link {font-family: \"Source Sans Pro\", sans-serif;color: #1D4ED8;font-size: 14px;font-weight: 600;text-decoration: underline;}.truste_accessible_link:hover {color: #1D4ED8;text-decoration: none !important;}.truste_accessible_link:focus-visible {outline: none;border-radius: 4px;box-shadow: 0 0 0 1px #FFFFFF, 0 0 0 4px #3699F\n",
+  "atElements": [
+    {
+      "tag": "DIV",
+      "class": "Leg__lose",
+      "text": "at Chelsea",
+      "parentHTML": "<div class=\"Leg__title\"><div class=\"Leg__win\">Manchester City to Win</div><div class=\"Leg__lose\">at Chelsea</div></div>"
+    },
+    {
+      "tag": "DIV",
+      "class": "Leg__lose",
+      "text": "at Houston Dynamo",
+      "parentHTML": "<div class=\"Leg__title\"><div class=\"Leg__win\">Vancouver Whitecaps to Win</div><div class=\"Leg__lose\">at Houston Dynamo</div></div>"
+    }
+  ],
+  "toWinElements": [
+    {
+      "tag": "DIV",
+      "class": "Leg__win",
+      "text": "Manchester City to Win",
+      "parentClass": "Leg__title"
+    },
+    {
+      "tag": "DIV",
+      "class": "Leg__win",
+      "text": "Vancouver Whitecaps to Win",
+      "parentClass": "Leg__title"
+    }
+  ]
+}
