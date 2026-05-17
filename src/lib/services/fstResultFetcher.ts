@@ -11,6 +11,11 @@ function teamsMatch(a: string, b: string): boolean {
   return na === nb || na.includes(nb) || nb.includes(na);
 }
 
+function isFinished(strStatus: string): boolean {
+  const s = (strStatus ?? '').toLowerCase();
+  return s === 'match finished' || s === 'ft' || s === 'aet' || s === 'pen';
+}
+
 interface MatchScore {
   homeScore: number;
   awayScore: number;
@@ -18,13 +23,10 @@ interface MatchScore {
 
 function extractScore(
   evHome: string,
-  evAway: string,
   intHome: number,
   intAway: number,
   homeTeam: string,
-  awayTeam: string
 ): MatchScore {
-  // Check if API sides match our sides, or are reversed
   if (teamsMatch(evHome, homeTeam)) {
     return { homeScore: intHome, awayScore: intAway };
   }
@@ -47,9 +49,12 @@ async function fetchJson(url: string): Promise<any> {
 function findInEvents(
   events: any[],
   homeTeam: string,
-  awayTeam: string
+  awayTeam: string,
 ): MatchScore | null {
   for (const ev of events) {
+    // Must be a finished match
+    if (!isFinished(ev.strStatus ?? '')) continue;
+
     const evHome = ev.strHomeTeam ?? '';
     const evAway = ev.strAwayTeam ?? '';
 
@@ -61,7 +66,7 @@ function findInEvents(
     const intAway = parseInt(ev.intAwayScore ?? '', 10);
     if (isNaN(intHome) || isNaN(intAway)) continue;
 
-    return extractScore(evHome, evAway, intHome, intAway, homeTeam, awayTeam);
+    return extractScore(evHome, intHome, intAway, homeTeam);
   }
   return null;
 }
@@ -71,7 +76,7 @@ export async function fetchScoreFromSportsDB(
   awayTeam: string,
   date: string
 ): Promise<MatchScore | null> {
-  // 1. eventsday — fast but incomplete for cup competitions
+  // 1. eventsday — fast, only returns finished matches for the day
   const dayJson = await fetchJson(
     `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${date}&s=Soccer`
   );
@@ -80,31 +85,29 @@ export async function fetchScoreFromSportsDB(
     if (found) return found;
   }
 
-  // 2. Search by event name — covers cup finals that eventsday misses
+  // 2. Search by name, strict date filter — covers cup finals eventsday misses
   const query = encodeURIComponent(`${homeTeam} vs ${awayTeam}`);
   const searchJson = await fetchJson(
     `https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${query}`
   );
   if (searchJson) {
-    // Filter to events on the target date
     const eventsOnDate = (searchJson.event ?? []).filter(
       (e: any) => e.dateEvent === date
     );
     const found = findInEvents(eventsOnDate, homeTeam, awayTeam);
     if (found) return found;
-
-    // Also try without date filter in case date is slightly off
-    const foundAny = findInEvents(searchJson.event ?? [], homeTeam, awayTeam);
-    if (foundAny) return foundAny;
   }
 
-  // 3. Try reversed search (Away vs Home)
+  // 3. Reversed search (Away vs Home), strict date filter
   const query2 = encodeURIComponent(`${awayTeam} vs ${homeTeam}`);
   const searchJson2 = await fetchJson(
     `https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${query2}`
   );
   if (searchJson2) {
-    const found = findInEvents(searchJson2.event ?? [], homeTeam, awayTeam);
+    const eventsOnDate2 = (searchJson2.event ?? []).filter(
+      (e: any) => e.dateEvent === date
+    );
+    const found = findInEvents(eventsOnDate2, homeTeam, awayTeam);
     if (found) return found;
   }
 
