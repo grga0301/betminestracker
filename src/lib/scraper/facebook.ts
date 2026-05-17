@@ -136,7 +136,7 @@ export async function scrapeFbTicket(): Promise<{
     await page.waitForSelector('input[name="email"]', { timeout: 15_000 });
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="pass"]', password);
-    await page.click('button[name="login"], input[name="login"]');
+    await page.keyboard.press('Enter');
     await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20_000 }).catch(() => {});
     await page.waitForTimeout(3000);
 
