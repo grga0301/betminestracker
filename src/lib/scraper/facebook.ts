@@ -44,10 +44,11 @@ function parseMatchLine(line: string): FbScrapedSelection | null {
 export function parseTicketText(text: string, postId: string): FbScrapedTicket | null {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
 
-  // Must contain TODAY TICKET marker
-  const hasTodayTicket = lines.some((l) =>
-    l.toUpperCase().includes('TODAY TICKET')
-  );
+  // Must contain TODAY TICKET marker (with space or underscore)
+  const hasTodayTicket = lines.some((l) => {
+    const u = l.toUpperCase();
+    return u.includes('TODAY_TICKET') || u.includes('TODAY TICKET');
+  });
   // Skip VIP posts (have photo + "VIP WIN")
   const isVip = lines.some((l) => l.toUpperCase().includes('VIP WIN'));
   if (!hasTodayTicket || isVip) return null;
@@ -86,12 +87,9 @@ export function parseTicketText(text: string, postId: string): FbScrapedTicket |
 // Check if a post text is a WIN confirmation
 function isWinPost(text: string): boolean {
   const upper = text.toUpperCase();
-  // Must have WIN pattern but NOT be a VIP win post
-  return (
-    (upper.includes('#TODAY_TICKET') || upper.includes('TODAY TICKET')) &&
-    (upper.includes('WIN') || upper.includes('POGODAK') || upper.includes('PROŠLO')) &&
-    !upper.includes('VIP WIN')
-  );
+  const hasTicketMarker = upper.includes('#TODAY_TICKET') || upper.includes('TODAY_TICKET') || upper.includes('TODAY TICKET');
+  const hasWin = upper.includes('WIN') || upper.includes('POGODAK') || upper.includes('WIIIIIN');
+  return hasTicketMarker && hasWin && !upper.includes('VIP WIN');
 }
 
 export async function scrapeFbTicket(): Promise<{
@@ -172,21 +170,28 @@ export async function scrapeFbTicket(): Promise<{
     console.log(`[FB] Page text preview: ${pageText.slice(0, 400).replace(/\n/g, ' ')}`);
 
     // Split the full page text into chunks around TODAY TICKET markers
+    // Posts use #TODAY_TICKET (underscore) — search both variants
     const posts: { text: string; postId: string }[] = [];
     const upperPage = pageText.toUpperCase();
-    let searchFrom = 0;
-    while (true) {
-      const idx = upperPage.indexOf('TODAY TICKET', searchFrom);
-      if (idx === -1) break;
-      // Take up to 800 chars before and 800 after as the "post" context
-      const start = Math.max(0, idx - 100);
-      const end = Math.min(pageText.length, idx + 800);
-      const chunk = pageText.slice(start, end);
-      posts.push({ text: chunk, postId: postIds[posts.length] ?? '' });
-      searchFrom = idx + 1;
+    const MARKERS = ['TODAY_TICKET', 'TODAY TICKET'];
+    const foundStarts = new Set<number>();
+
+    for (const marker of MARKERS) {
+      let searchFrom = 0;
+      while (true) {
+        const idx = upperPage.indexOf(marker, searchFrom);
+        if (idx === -1) break;
+        const start = Math.max(0, idx - 100);
+        if (!foundStarts.has(start)) {
+          foundStarts.add(start);
+          const end = Math.min(pageText.length, idx + 800);
+          posts.push({ text: pageText.slice(start, end), postId: postIds[posts.length] ?? '' });
+        }
+        searchFrom = idx + 1;
+      }
     }
 
-    // Also check for standalone WIN posts (no TODAY TICKET in them)
+    // Also check for standalone WIN posts
     const winIdx = upperPage.indexOf('#WIIIIIN');
     if (winIdx !== -1 && posts.length === 0) {
       const chunk = pageText.slice(Math.max(0, winIdx - 100), Math.min(pageText.length, winIdx + 400));
