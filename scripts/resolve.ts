@@ -74,7 +74,7 @@ async function main() {
 
         let score: { homeScore: number; awayScore: number } | null = null;
 
-        // 1. Try daily page results first
+        // 1. Try daily page results first (only --with-score elements = finished matches)
         score = findScore(dailyResults, sel.homeTeam, sel.awayTeam);
         if (score) {
           console.log(`     ✓ Found on daily page: ${score.homeScore}-${score.awayScore}`);
@@ -82,10 +82,14 @@ async function main() {
           // 2. Fallback: scrape football-results page
           console.log(`     Not on daily page, trying football-results...`);
           for (let attempt = 1; attempt <= 3; attempt++) {
-            score = await scrapeMatchResult(sel.homeTeam, sel.awayTeam);
-            if (score) break;
+            const candidate = await scrapeMatchResult(sel.homeTeam, sel.awayTeam);
+            // Reject 0-0 from the fallback scraper — it's ambiguous (could be pre-match)
+            if (candidate && (candidate.homeScore > 0 || candidate.awayScore > 0)) {
+              score = candidate;
+              break;
+            }
             if (attempt < 3) {
-              console.log(`     Attempt ${attempt} failed, retrying in 3s...`);
+              console.log(`     Attempt ${attempt} returned no usable score, retrying in 3s...`);
               await sleep(3000);
             }
           }
