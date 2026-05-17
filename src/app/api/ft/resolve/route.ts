@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPendingFtTips, updateFtTipResult, getAllFtTips } from '@/lib/services/ftService';
 import { fetchScoreFromSportsDB } from '@/lib/services/fstResultFetcher';
-import { evaluateSelection } from '@/lib/services/resultEvaluator';
+import { evaluateWithGemini } from '@/lib/services/geminiEvaluator';
 
 export async function POST() {
   try {
@@ -21,12 +21,14 @@ export async function POST() {
         continue;
       }
 
-      const status = evaluateSelection({
-        market: tip.market,
-        line: null,
-        homeScore: score.homeScore,
-        awayScore: score.awayScore,
-      });
+      const status = await evaluateWithGemini(
+        tip.market,
+        tip.pick,
+        tip.homeTeam,
+        tip.awayTeam,
+        score.homeScore,
+        score.awayScore,
+      );
 
       await updateFtTipResult(tip.id, status, score.homeScore, score.awayScore);
       results.push({ date: tip.date, status, score: `${score.homeScore}-${score.awayScore}` });
