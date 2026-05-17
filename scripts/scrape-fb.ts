@@ -1,6 +1,6 @@
 // scripts/scrape-fb.ts — npm run scrape:fb
 import { scrapeFbTicket } from '../src/lib/scraper/facebook';
-import { saveFbTicket, resolveFbTicket } from '../src/lib/services/fbService';
+import { saveFbTicket, resolveFbTicket, getPendingFbTickets } from '../src/lib/services/fbService';
 
 async function main() {
   console.log('╔════════════════════════════════════════╗');
@@ -8,9 +8,25 @@ async function main() {
   console.log('╚════════════════════════════════════════╝');
   console.log(`  Date: ${new Date().toLocaleDateString('en-GB')}\n`);
 
+  const today = new Date().toISOString().split('T')[0];
+
+  // ── Auto-resolve stale PENDING tickets as LOSS ────────────────────────
+  // Any ticket still PENDING from a previous date gets marked LOSS
+  // (if it had won, #WIIIIIN would have been detected in a previous run)
+  const pending = await getPendingFbTickets();
+  for (const t of pending) {
+    if (t.date < today) {
+      const resolved = await resolveFbTicket(t.date, 'LOSS');
+      if (resolved) {
+        console.log(`  ✗ Auto-resolved ${t.date} as LOSS (no WIN post detected)`);
+      }
+    }
+  }
+
+  // ── Scrape FB page ────────────────────────────────────────────────────
   const { ticket, isWin, winForDate } = await scrapeFbTicket();
 
-  // Handle WIN detection from standalone WIN post
+  // Handle WIN detection from #WIIIIIN post on the page
   if (isWin && winForDate) {
     const resolved = await resolveFbTicket(winForDate, 'WIN');
     if (resolved) {
