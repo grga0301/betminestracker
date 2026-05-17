@@ -70,6 +70,17 @@ async function main() {
           continue;
         }
 
+        // Skip if kickoff + 110 min hasn't passed yet (match still in progress)
+        if (sel.kickoff) {
+          const kickoffMs = new Date(sel.kickoff).getTime();
+          const matchEndMs = kickoffMs + 110 * 60 * 1000;
+          if (Date.now() < matchEndMs) {
+            const minsLeft = Math.ceil((matchEndMs - Date.now()) / 60000);
+            console.log(`  ⏳ ${sel.homeTeam} vs ${sel.awayTeam} — match not finished yet (~${minsLeft} min left)`);
+            continue;
+          }
+        }
+
         console.log(`  🔍 Checking: ${sel.homeTeam} vs ${sel.awayTeam}...`);
 
         let score: { homeScore: number; awayScore: number } | null = null;
