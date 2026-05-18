@@ -24,10 +24,19 @@ interface MatchScore {
 async function fetchJson(url: string, timeoutMs = 10_000, extraHeaders: Record<string, string> = {}): Promise<any> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', ...extraHeaders },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        ...extraHeaders,
+      },
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const host = new URL(url).hostname;
+      console.log(`  [HTTP] ${res.status} from ${host}`);
+      return null;
+    }
     return await res.json();
   } catch {
     return null;
@@ -133,7 +142,11 @@ async function fetchFromSofaScore(homeTeam: string, awayTeam: string, date: stri
   const json = await fetchJson(
     `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
     10_000,
-    { 'Accept': 'application/json', 'Referer': 'https://www.sofascore.com/' }
+    {
+      'Referer': 'https://www.sofascore.com/',
+      'Origin': 'https://www.sofascore.com',
+      'Cache-Control': 'no-cache',
+    }
   );
   if (!json) return null;
 
