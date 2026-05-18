@@ -165,24 +165,28 @@ export async function fetchScoreFromSportsDB(
   awayTeam: string,
   date: string
 ): Promise<MatchScore | null> {
+  console.log(`  [Fetch] TheSportsDB...`);
   const sportsDb = await fetchFromSportsDB(homeTeam, awayTeam, date);
-  if (sportsDb) return sportsDb;
+  if (sportsDb) { console.log(`  [Fetch] TheSportsDB: ${sportsDb.homeScore}-${sportsDb.awayScore}`); return sportsDb; }
+  console.log(`  [Fetch] TheSportsDB: no result`);
 
+  console.log(`  [Fetch] ESPN (${ESPN_LEAGUES.length} leagues parallel)...`);
   const espn = await fetchFromESPN(homeTeam, awayTeam, date);
-  if (espn) return espn;
+  if (espn) { console.log(`  [Fetch] ESPN: ${espn.homeScore}-${espn.awayScore}`); return espn; }
+  console.log(`  [Fetch] ESPN: no result`);
 
+  console.log(`  [Fetch] SofaScore...`);
   const sofa = await fetchFromSofaScore(homeTeam, awayTeam, date);
-  if (sofa) return sofa;
+  if (sofa) { console.log(`  [Fetch] SofaScore: ${sofa.homeScore}-${sofa.awayScore}`); return sofa; }
+  console.log(`  [Fetch] SofaScore: no result`);
 
   // Final fallback: Gemini with Google Search grounding
   if (process.env.GEMINI_API_KEY) {
-    console.log(`  🤖 All sources failed — trying Gemini Search for ${homeTeam} vs ${awayTeam}...`);
+    console.log(`  [Fetch] Gemini Search...`);
     const { fetchScoreWithGemini } = await import('./geminiEvaluator');
     const gemini = await fetchScoreWithGemini(homeTeam, awayTeam, date);
-    if (gemini) {
-      console.log(`  🤖 Gemini found: ${gemini.homeScore}-${gemini.awayScore}`);
-      return gemini;
-    }
+    if (gemini) { console.log(`  [Fetch] Gemini: ${gemini.homeScore}-${gemini.awayScore}`); return gemini; }
+    console.log(`  [Fetch] Gemini: no result`);
   }
 
   return null;

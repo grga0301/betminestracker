@@ -72,15 +72,20 @@ export async function fetchScoreWithGemini(
       }
     );
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.log(`  [Gemini] HTTP error: ${res.status}`);
+      return null;
+    }
     const json = await res.json();
     const answer = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
+    console.log(`  [Gemini] Raw answer: "${answer}"`);
 
     const match = answer.match(/\b(\d+)\s*[-–]\s*(\d+)\b/);
     if (!match) return null;
 
     return { homeScore: parseInt(match[1]), awayScore: parseInt(match[2]) };
-  } catch {
+  } catch (e) {
+    console.log(`  [Gemini] Exception: ${e}`);
     return null;
   }
 }
