@@ -1,13 +1,10 @@
 import { parse } from 'node-html-parser';
 
-// Map freetips.com market labels → internal evaluator format
-// fullText = rawMarket + ' ' + pick (combined for line extraction)
 function mapMarket(rawMarket: string, pick: string): string {
   const m = rawMarket.toLowerCase();
   const p = pick.toLowerCase();
   const full = `${m} ${p}`;
 
-  // Combined markets — derive from pick text (e.g. "Inter Miami & Yes")
   if (m.includes('result') && m.includes('both teams')) {
     if (p.includes('& yes')) return 'BTTS';
     if (p.includes('& no')) return 'No BTTS';
@@ -17,20 +14,19 @@ function mapMarket(rawMarket: string, pick: string): string {
     return p.includes('no') ? 'No BTTS' : 'BTTS';
   }
 
-  // Over/Under — extract line from combined market+pick text
-  // Handles: "Over 2.5", "Alternative Total Goals Over 3.5", "Total Goals Over", pick="Over 3.5"
   if (
     m.includes('over') || m.includes('under') ||
     m.includes('total goals') || m.includes('total goal') ||
     m.includes('number of goals') ||
-    p.includes('over') || p.includes('under')
+    p.startsWith('over') || p.startsWith('under')
   ) {
     const isUnder = full.includes('under');
-    const lineMatch = full.match(/(\d+\.5|\d+\.\d+|\d+)/);
-    if (lineMatch) {
-      return `${isUnder ? 'Under' : 'Over'} ${lineMatch[1]}`;
-    }
-    // No line found — still pass direction so Gemini can evaluate
+    // Extract line like 3.5, 2.5, 1.5 from combined text
+    const lineMatch = full.match(/(\d+\.5|\d+\.\d+)/);
+    if (lineMatch) return `${isUnder ? 'Under' : 'Over'} ${lineMatch[1]}`;
+    // Integer line (e.g. "over 3 goals")
+    const intMatch = full.match(/(\d+)\s*goal/);
+    if (intMatch) return `${isUnder ? 'Under' : 'Over'} ${intMatch[1]}`;
     return isUnder ? 'Under Goals' : 'Over Goals';
   }
 
@@ -67,35 +63,42 @@ export async function scrapeFtBetOfTheDay(): Promise<FtScrapedTip> {
   const html = await res.text();
   const root = parse(html);
 
-  // Teams: .m-name → "Inter Miami v Portland Timbers"
+  // Teams: .m-name → "Djurgarden v Sirius"
   const mName = root.querySelector('.m-name')?.text.trim() ?? '';
   const teamSplit = mName.split(/\s+v\s+/i);
   if (teamSplit.length < 2) throw new Error(`Could not parse teams from: "${mName}"`);
   const homeTeam = teamSplit[0].trim();
   const awayTeam = teamSplit[1].trim();
 
-  // Market: first line of .match-name
+  // Market: first non-empty line of .match-name
   const matchNameLines = (root.querySelector('.match-name')?.text ?? '')
     .split('\n').map((l) => l.trim()).filter(Boolean);
   const rawMarket = matchNameLines[0] ?? 'Unknown';
-  // Extra lines sometimes contain the line number (e.g. "Alternative Total Goals\n3.5")
-  const marketExtra = matchNameLines.slice(1).join(' ');
 
-  // Pick: .plr-name → "Over 3.5 (2/1)" — strip fractional odds suffix
+  // Pick: .plr-name → "Over (6/4)" — strip fractional odds suffix
   const rawPick = (root.querySelector('.plr-name')?.text.trim() ?? '')
-    .replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
+    .replace(/\s*\([^)]+\)\s*$/, '').trim();
 
-  // Combine pick with any extra market lines so line numbers aren't lost
-  const pick = rawPick + (marketExtra ? ` ${marketExtra}` : '');
+  // If pick has no line number (e.g. just "Over"), search reason text for a goal line
+  // Reason text is usually a <p> following the bet box — search full page text
+  let pick = rawPick;
+  if (/^(over|under)$/i.test(rawPick)) {
+    const pageText = root.text;
+    // Look for patterns like "over 3.5 goals", "3.5 goals", "over3.5", etc.
+    const reasonLine = pageText.match(/(?:over|under)\s*([\d]+\.[\d]+)\s*goal/i)
+      ?? pageText.match(/\b([\d]+\.5)\s*goals?\b/i);
+    if (reasonLine) {
+      pick = `${rawPick} ${reasonLine[1]}`;
+    }
+  }
 
-  // Map to evaluator-compatible market name
   const market = mapMarket(rawMarket, pick);
 
   // Odds (decimal): .ods
   const oddText = root.querySelector('.ods')?.text.trim() ?? '0';
   const odd = parseFloat(oddText) || 0;
 
-  // Kickoff: .betacctime contains "17 May 23:00 ..." — extract HH:MM
+  // Kickoff: .betacctime — extract HH:MM
   const betaccText = root.querySelector('.betacctime')?.text.trim() ?? '';
   const timeMatch = betaccText.match(/(\d{1,2}:\d{2})/);
   const kickoff = timeMatch ? timeMatch[1] : '';
