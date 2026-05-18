@@ -1,6 +1,7 @@
 // scripts/scrape-fb.ts — npm run scrape:fb
 import { scrapeFbTicket } from '../src/lib/scraper/facebook';
 import { saveFbTicket, resolveFbTicket, getPendingFbTickets } from '../src/lib/services/fbService';
+import { sendTelegramMessage } from '../src/lib/services/telegramService';
 
 async function main() {
   console.log('╔════════════════════════════════════════╗');
@@ -52,7 +53,19 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error('✗ scrape-fb failed:', err);
+  const msg = String(err?.message ?? err);
+  if (msg.includes('cookies expired') || msg.includes('cookies')) {
+    await sendTelegramMessage(
+      '⚠️ <b>Facebook scraper — cookies expirali!</b>\n\n' +
+      'Nije moguće dohvatiti IceHockeyBet stranicu.\n\n' +
+      '<b>Što napraviti:</b>\n' +
+      '1. Otvori Chrome → facebook.com (mora si logiran)\n' +
+      '2. Instaliraj ekstenziju <b>Cookie-Editor</b>\n' +
+      '3. Klikni Export (JSON)\n' +
+      '4. GitHub → Settings → Secrets → ažuriraj <b>FB_COOKIES</b>'
+    ).catch(() => {});
+  }
   process.exit(1);
 });
