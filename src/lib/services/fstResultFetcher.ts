@@ -174,5 +174,16 @@ export async function fetchScoreFromSportsDB(
   const sofa = await fetchFromSofaScore(homeTeam, awayTeam, date);
   if (sofa) return sofa;
 
+  // Final fallback: Gemini with Google Search grounding
+  if (process.env.GEMINI_API_KEY) {
+    console.log(`  🤖 All sources failed — trying Gemini Search for ${homeTeam} vs ${awayTeam}...`);
+    const { fetchScoreWithGemini } = await import('./geminiEvaluator');
+    const gemini = await fetchScoreWithGemini(homeTeam, awayTeam, date);
+    if (gemini) {
+      console.log(`  🤖 Gemini found: ${gemini.homeScore}-${gemini.awayScore}`);
+      return gemini;
+    }
+  }
+
   return null;
 }

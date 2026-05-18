@@ -44,6 +44,47 @@ export async function evaluateWithGemini(
   return 'VOID';
 }
 
+// Uses Gemini with Google Search grounding to find a match result when all other sources fail.
+export async function fetchScoreWithGemini(
+  homeTeam: string,
+  awayTeam: string,
+  date: string,
+): Promise<{ homeScore: number; awayScore: number } | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const prompt =
+    `What was the final score of the football match between ${homeTeam} (home) and ${awayTeam} (away) played on ${date}?\n` +
+    `Reply with ONLY the score in format "H-A" (e.g. "2-1"). ` +
+    `If the match is not finished or you cannot find the result, reply with "UNKNOWN".`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ googleSearch: {} }],
+          generationConfig: { temperature: 0, maxOutputTokens: 20 },
+        }),
+      }
+    );
+
+    if (!res.ok) return null;
+    const json = await res.json();
+    const answer = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
+
+    const match = answer.match(/\b(\d+)\s*[-–]\s*(\d+)\b/);
+    if (!match) return null;
+
+    return { homeScore: parseInt(match[1]), awayScore: parseInt(match[2]) };
+  } catch {
+    return null;
+  }
+}
+
 // Tries local rule-based evaluation first; falls back to Gemini only for unknown markets.
 // pick defaults to market when not available as a separate field (e.g. BetMines).
 export async function evaluateWithFallback(
