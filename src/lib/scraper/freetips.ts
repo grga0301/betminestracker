@@ -1,29 +1,39 @@
 import { parse } from 'node-html-parser';
 
 // Map freetips.com market labels → internal evaluator format
+// fullText = rawMarket + ' ' + pick (combined for line extraction)
 function mapMarket(rawMarket: string, pick: string): string {
   const m = rawMarket.toLowerCase();
   const p = pick.toLowerCase();
+  const full = `${m} ${p}`;
 
   // Combined markets — derive from pick text (e.g. "Inter Miami & Yes")
   if (m.includes('result') && m.includes('both teams')) {
-    // Pick: "Team & Yes" or "Draw & Yes" etc.
-    if (p.includes('& yes')) {
-      if (p.includes('draw')) return 'BTTS'; // draw + btts → evaluate BTTS only
-      return 'BTTS'; // home/away + btts → evaluate BTTS (stricter but safer)
-    }
+    if (p.includes('& yes')) return 'BTTS';
     if (p.includes('& no')) return 'No BTTS';
   }
 
   if (m.includes('both teams to score') || m === 'btts') {
     return p.includes('no') ? 'No BTTS' : 'BTTS';
   }
-  if (m.includes('over 2.5') || m.includes('over2.5')) return 'Over 2.5';
-  if (m.includes('under 2.5') || m.includes('under2.5')) return 'Under 2.5';
-  if (m.includes('over 3.5')) return 'Over 3.5';
-  if (m.includes('under 3.5')) return 'Under 3.5';
-  if (m.includes('over 1.5')) return 'Over 1.5';
-  if (m.includes('under 1.5')) return 'Under 1.5';
+
+  // Over/Under — extract line from combined market+pick text
+  // Handles: "Over 2.5", "Alternative Total Goals Over 3.5", "Total Goals Over", pick="Over 3.5"
+  if (
+    m.includes('over') || m.includes('under') ||
+    m.includes('total goals') || m.includes('total goal') ||
+    m.includes('number of goals') ||
+    p.includes('over') || p.includes('under')
+  ) {
+    const isUnder = full.includes('under');
+    const lineMatch = full.match(/(\d+\.5|\d+\.\d+|\d+)/);
+    if (lineMatch) {
+      return `${isUnder ? 'Under' : 'Over'} ${lineMatch[1]}`;
+    }
+    // No line found — still pass direction so Gemini can evaluate
+    return isUnder ? 'Under Goals' : 'Over Goals';
+  }
+
   if (m === 'home win' || m === 'home') return 'Home';
   if (m === 'away win' || m === 'away') return 'Away';
   if (m === 'draw') return 'Draw';
@@ -31,7 +41,6 @@ function mapMarket(rawMarket: string, pick: string): string {
   if (m.includes('x2') || m.includes('draw or away')) return 'X2';
   if (m.includes('12') || m.includes('home or away')) return '12';
 
-  // Return raw market as fallback — will log VOID warning
   return rawMarket;
 }
 
@@ -65,14 +74,19 @@ export async function scrapeFtBetOfTheDay(): Promise<FtScrapedTip> {
   const homeTeam = teamSplit[0].trim();
   const awayTeam = teamSplit[1].trim();
 
-  // Market: first line of .match-name (before the team line)
+  // Market: first line of .match-name
   const matchNameLines = (root.querySelector('.match-name')?.text ?? '')
     .split('\n').map((l) => l.trim()).filter(Boolean);
   const rawMarket = matchNameLines[0] ?? 'Unknown';
+  // Extra lines sometimes contain the line number (e.g. "Alternative Total Goals\n3.5")
+  const marketExtra = matchNameLines.slice(1).join(' ');
 
-  // Pick: .plr-name → "Inter Miami & Yes (11/10)" — strip fractional odds
-  const pick = (root.querySelector('.plr-name')?.text.trim() ?? '')
+  // Pick: .plr-name → "Over 3.5 (2/1)" — strip fractional odds suffix
+  const rawPick = (root.querySelector('.plr-name')?.text.trim() ?? '')
     .replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
+
+  // Combine pick with any extra market lines so line numbers aren't lost
+  const pick = rawPick + (marketExtra ? ` ${marketExtra}` : '');
 
   // Map to evaluator-compatible market name
   const market = mapMarket(rawMarket, pick);
