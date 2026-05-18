@@ -34,7 +34,10 @@ export async function evaluateWithGemini(
     }
   );
 
-  if (!res.ok) throw new Error(`Gemini API error: ${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    console.log(`  [Gemini] API error: ${res.status}`);
+    return 'VOID';
+  }
 
   const json = await res.json();
   const answer = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim().toUpperCase();

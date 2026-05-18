@@ -19,12 +19,14 @@ export function evaluateSelection(input: EvalInput): SelectionStatus {
   const marketLower = market.toLowerCase();
 
   // ─── Over / Under goals ──────────────────────────────────────────────
-  if (marketLower.includes('over') && line !== null) {
-    return totalGoals > line ? 'WIN' : 'LOSS';
+  if (marketLower.includes('over')) {
+    const l = line ?? parseFloat(marketLower.match(/over\s*([\d.]+)/)?.[1] ?? '');
+    if (!isNaN(l)) return totalGoals > l ? 'WIN' : 'LOSS';
   }
 
-  if (marketLower.includes('under') && line !== null) {
-    return totalGoals < line ? 'WIN' : 'LOSS';
+  if (marketLower.includes('under')) {
+    const l = line ?? parseFloat(marketLower.match(/under\s*([\d.]+)/)?.[1] ?? '');
+    if (!isNaN(l)) return totalGoals < l ? 'WIN' : 'LOSS';
   }
 
   // ─── Both Teams To Score (BTTS) ──────────────────────────────────────
