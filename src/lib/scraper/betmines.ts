@@ -107,13 +107,26 @@ export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
     await page.goto(BETMINES_URL, { waitUntil: 'networkidle', timeout: 60_000 });
     await page.waitForTimeout(4000);
 
+    const h2Texts = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('h2, h3')).map((h) => h.textContent?.trim()).filter(Boolean)
+    );
+    console.log(`[Scraper] H2/H3 headings found: ${JSON.stringify(h2Texts)}`);
+
     const raw = await page.evaluate(() => {
       // ── 1. Find the "Double" section via its H2 label ──────────────────────
-      const doubleH2 = Array.from(document.querySelectorAll('h2'))
-        .find((h) => h.textContent?.trim() === 'Double');
-      if (!doubleH2) return null;
+      const doubleH2 = Array.from(document.querySelectorAll('h2, h3'))
+        .find((h) => h.textContent?.trim().toLowerCase().startsWith('double'));
 
-      const container = doubleH2.parentElement;
+      // Fallback: find the container that holds exactly 2 fixture ULs (= a double)
+      let container: Element | null = doubleH2?.parentElement ?? null;
+      if (!container) {
+        const allFixtures = Array.from(document.querySelectorAll('.daily-bet-fixture-content'));
+        if (allFixtures.length >= 2) {
+          // Walk up to find a common ancestor that wraps exactly 2 fixtures
+          const parent = allFixtures[0].closest('section, div, article');
+          if (parent) container = parent;
+        }
+      }
       if (!container) return null;
 
       // ── 2. Collect total odds ───────────────────────────────────────────────
