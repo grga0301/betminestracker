@@ -1,8 +1,10 @@
 // src/lib/scraper/facebook.ts
-// Scrapes IceHockeyBet Facebook page using Playwright + login
+// Scrapes IceHockeyBet Facebook page: mbasic (no auth) → Playwright+cookies fallback
 import { chromium } from 'playwright';
+import { parse as parseHtml } from 'node-html-parser';
 
-const FB_PAGE_URL = 'https://m.facebook.com/IceHockeyBet';
+const FB_PAGE_SLUG = 'IceHockeyBet';
+const FB_PAGE_URL = `https://m.facebook.com/${FB_PAGE_SLUG}`;
 
 export interface FbScrapedSelection {
   kickoff: string;
@@ -89,14 +91,135 @@ function isWinPost(text: string): boolean {
   return (upper.includes('WIIIIIN') || upper.includes('POGODAK')) && !upper.includes('VIP WIN');
 }
 
+// ── Shared parsing logic ──────────────────────────────────────────────────────
+
+function extractTicketFromText(
+  pageText: string,
+  postIds: string[]
+): { ticket: FbScrapedTicket | null; isWin: boolean | null; winForDate: string | null } {
+  const upperPage = pageText.toUpperCase();
+  const posts: { text: string; postId: string }[] = [];
+
+  const firstIdx = upperPage.search(/TODAY[_ ]TICKET/);
+  if (firstIdx !== -1) {
+    const afterFirst = upperPage.indexOf('TODAY_TICKET', firstIdx + 1);
+    const afterFirstB = upperPage.indexOf('TODAY TICKET', firstIdx + 1);
+    const nextOccurrence = Math.min(
+      afterFirst === -1 ? Infinity : afterFirst,
+      afterFirstB === -1 ? Infinity : afterFirstB
+    );
+    const end = nextOccurrence === Infinity
+      ? Math.min(pageText.length, firstIdx + 900)
+      : nextOccurrence;
+    posts.push({ text: pageText.slice(firstIdx, end), postId: postIds[0] ?? '' });
+  }
+
+  const winIdx = upperPage.indexOf('WIIIIIN');
+  if (winIdx !== -1 && posts.length === 0) {
+    const chunk = pageText.slice(Math.max(0, winIdx - 100), Math.min(pageText.length, winIdx + 400));
+    posts.push({ text: chunk, postId: postIds[0] ?? '' });
+  }
+
+  console.log(`[FB] Found ${posts.length} post(s) to check`);
+  if (posts.length > 0) {
+    console.log(`[FB] First chunk preview: ${posts[0].text.slice(0, 300).replace(/\n/g, ' | ')}`);
+  }
+
+  let todayTicket: FbScrapedTicket | null = null;
+  let isWin: boolean | null = null;
+  let winForDate: string | null = null;
+
+  for (const post of posts) {
+    const isOldPost = /·\s*\d+\s*d[.\s·]/i.test(post.text);
+    if (isOldPost) {
+      console.log('[FB] Post is from a previous day — skipping');
+      continue;
+    }
+
+    const ticket = parseTicketText(post.text, post.postId);
+    if (ticket) {
+      todayTicket = ticket;
+      console.log(`[FB] Found TODAY TICKET: ${ticket.selections.length} selections, odds ${ticket.totalOdds}`);
+      if (isWinPost(post.text)) {
+        isWin = true;
+        winForDate = ticket.date;
+      }
+      break;
+    }
+
+    if (isWinPost(post.text)) {
+      isWin = true;
+      winForDate = new Date().toISOString().split('T')[0];
+      console.log('[FB] Found WIN confirmation post');
+    }
+  }
+
+  return { ticket: todayTicket, isWin, winForDate };
+}
+
+// ── mbasic.facebook.com (no auth, public pages) ──────────────────────────────
+
+async function fetchFromMbasic(): Promise<{ pageText: string; postIds: string[] } | null> {
+  try {
+    const res = await fetch(`https://mbasic.facebook.com/${FB_PAGE_SLUG}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) {
+      console.log(`[FB] mbasic HTTP ${res.status}`);
+      return null;
+    }
+    const html = await res.text();
+    const root = parseHtml(html);
+
+    // Login wall detection — mbasic redirects to /login if page is not public
+    const bodyText = root.querySelector('body')?.text ?? '';
+    if (bodyText.length < 500 || /log\s*in to facebook/i.test(bodyText)) {
+      console.log('[FB] mbasic: login wall detected — page not accessible without auth');
+      return null;
+    }
+
+    // Extract post IDs from links
+    const postIds: string[] = [];
+    for (const a of root.querySelectorAll('a[href]')) {
+      const href = a.getAttribute('href') ?? '';
+      const m = href.match(/\/posts\/(\d+)|story_fbid=(\d+)|permalink\/(\d+)/);
+      if (m) postIds.push(m[1] || m[2] || m[3]);
+    }
+
+    console.log(`[FB] mbasic: text length ${bodyText.length}, post IDs: ${[...new Set(postIds)].length}`);
+    return { pageText: bodyText, postIds: [...new Set(postIds)] };
+  } catch (e) {
+    console.log(`[FB] mbasic error: ${e}`);
+    return null;
+  }
+}
+
+// ── Main scraper ──────────────────────────────────────────────────────────────
+
 export async function scrapeFbTicket(): Promise<{
   ticket: FbScrapedTicket | null;
   isWin: boolean | null;
   winForDate: string | null;
 }> {
+  // ── 1. Try mbasic.facebook.com without authentication ────────────────────
+  console.log('[FB] Trying mbasic.facebook.com (no auth)...');
+  const mbasic = await fetchFromMbasic();
+  if (mbasic && mbasic.pageText.toUpperCase().includes('TODAY')) {
+    console.log('[FB] mbasic succeeded — parsing posts without Playwright');
+    return extractTicketFromText(mbasic.pageText, mbasic.postIds);
+  }
+
+  // ── 2. Fallback: Playwright + cookies ────────────────────────────────────
+  console.log('[FB] mbasic did not find ticket — falling back to Playwright+cookies');
+
   const cookiesJson = process.env.FB_COOKIES;
   if (!cookiesJson) {
-    throw new Error('FB_COOKIES environment variable required (export cookies from logged-in browser)');
+    throw new Error('FB_COOKIES environment variable required (mbasic failed and no cookies set)');
   }
 
   let rawCookies: Record<string, unknown>[];
@@ -106,7 +229,6 @@ export async function scrapeFbTicket(): Promise<{
     throw new Error('FB_COOKIES is not valid JSON');
   }
 
-  // Normalize sameSite to values Playwright accepts (Strict | Lax | None)
   const sameSiteMap: Record<string, 'Strict' | 'Lax' | 'None'> = {
     strict: 'Strict', lax: 'Lax', none: 'None',
     no_restriction: 'None', unspecified: 'Lax',
@@ -129,7 +251,6 @@ export async function scrapeFbTicket(): Promise<{
       locale: 'en-US',
     });
 
-    // ── Load saved session cookies (no login / no 2FA needed) ────────────
     await context.addCookies(cookies);
     console.log(`[FB] Loaded ${cookies.length} cookies — skipping login`);
 
@@ -142,13 +263,11 @@ export async function scrapeFbTicket(): Promise<{
     const pageUrl = page.url();
     console.log(`[FB] FB page URL: ${pageUrl}`);
 
-    // Scroll to load more posts
     for (let i = 0; i < 3; i++) {
       await page.evaluate(() => window.scrollBy(0, 1500));
       await page.waitForTimeout(1500);
     }
 
-    // ── Extract posts via full page text (avoids mobile FB DOM quirks) ─────
     const { pageText, postIds } = await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll('a[href*="/posts/"], a[href*="story_fbid"], a[href*="permalink"]'));
       const postIds: string[] = [];
@@ -166,79 +285,11 @@ export async function scrapeFbTicket(): Promise<{
     console.log(`[FB] Page text length: ${pageText.length}, post IDs found: ${postIds.length}`);
     console.log(`[FB] Page text preview: ${pageText.slice(0, 400).replace(/\n/g, ' ')}`);
 
-    // Detect expired/invalid cookies — login wall has <500 chars and no TODAY_TICKET
     if (pageText.length < 1000 && !pageText.toUpperCase().includes('TODAY')) {
       throw new Error('FB cookies expired or invalidated — re-export from browser and update FB_COOKIES secret');
     }
 
-    // Find the first (= most recent) TODAY_TICKET post and extract only that post's text
-    const upperPage = pageText.toUpperCase();
-    const posts: { text: string; postId: string }[] = [];
-
-    const firstIdx = upperPage.search(/TODAY[_ ]TICKET/);
-    if (firstIdx !== -1) {
-      // End the chunk at the next TODAY_TICKET occurrence (= next post), or 900 chars max
-      // Find next occurrence after firstIdx
-      const afterFirst = upperPage.indexOf('TODAY_TICKET', firstIdx + 1);
-      const afterFirstB = upperPage.indexOf('TODAY TICKET', firstIdx + 1);
-      const nextOccurrence = Math.min(
-        afterFirst === -1 ? Infinity : afterFirst,
-        afterFirstB === -1 ? Infinity : afterFirstB
-      );
-      const end = nextOccurrence === Infinity
-        ? Math.min(pageText.length, firstIdx + 900)
-        : nextOccurrence;
-
-      posts.push({ text: pageText.slice(firstIdx, end), postId: postIds[0] ?? '' });
-    }
-
-    // Also check for standalone WIN post if no ticket found
-    const winIdx = upperPage.indexOf('WIIIIIN');
-    if (winIdx !== -1 && posts.length === 0) {
-      const chunk = pageText.slice(Math.max(0, winIdx - 100), Math.min(pageText.length, winIdx + 400));
-      posts.push({ text: chunk, postId: postIds[0] ?? '' });
-    }
-
-    console.log(`[FB] Found ${posts.length} post(s) to check`);
-    if (posts.length > 0) {
-      console.log(`[FB] First chunk preview: ${posts[0].text.slice(0, 300).replace(/\n/g, ' | ')}`);
-    }
-
-    let todayTicket: FbScrapedTicket | null = null;
-    let isWin: boolean | null = null;
-    let winForDate: string | null = null;
-
-    for (const post of posts) {
-      // Skip posts older than today — FB shows "· 1 d. ·" or "· 2 d. ·" for previous days
-      // Today's posts show "· Xh ·" (hours)
-      const isOldPost = /·\s*\d+\s*d[.\s·]/i.test(post.text);
-      if (isOldPost) {
-        console.log('[FB] Post is from a previous day (detected day-old timestamp) — skipping');
-        continue;
-      }
-
-      // Always try to parse as a ticket first
-      const ticket = parseTicketText(post.text, post.postId);
-      if (ticket) {
-        todayTicket = ticket;
-        console.log(`[FB] Found TODAY TICKET: ${ticket.selections.length} selections, odds ${ticket.totalOdds}`);
-        // Check if a WIN confirmation is also visible on the same page chunk
-        if (isWinPost(post.text)) {
-          isWin = true;
-          winForDate = ticket.date;
-        }
-        break;
-      }
-
-      // Not a ticket — check if it's a standalone WIN confirmation
-      if (isWinPost(post.text)) {
-        isWin = true;
-        winForDate = new Date().toISOString().split('T')[0];
-        console.log('[FB] Found WIN confirmation post');
-      }
-    }
-
-    return { ticket: todayTicket, isWin, winForDate };
+    return extractTicketFromText(pageText, postIds);
   } finally {
     await browser.close();
   }
