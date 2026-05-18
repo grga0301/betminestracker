@@ -89,8 +89,6 @@ const ESPN_LEAGUES = [
   'eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1',
   'ned.1', 'por.1', 'tur.1', 'bel.1', 'sco.1',
   'usa.1', 'gre.1', 'aut.1', 'hrv.1',
-  'swe.1', 'nor.1', 'den.1', 'fin.1',  // Nordic leagues
-  'srb.1', 'svn.1', 'che.1', 'cze.1',  // Other European
   'UEFA.CHAMPIONS_LEAGUE', 'UEFA.EUROPA', 'UEFA.EUROPA_CONFERENCE_LEAGUE',
 ];
 
@@ -131,6 +129,44 @@ async function fetchFromESPN(homeTeam: string, awayTeam: string, date: string): 
       if (teamsMatch(homeName, homeTeam)) return { homeScore: hs, awayScore: as_ };
       return { homeScore: as_, awayScore: hs };
     }
+  }
+  return null;
+}
+
+// ── API-Football (RapidAPI) ───────────────────────────────────────────────────
+// Free tier: 100 req/day — covers all leagues including Allsvenskan, Eliteserien, etc.
+// Register free at rapidapi.com → api-football → add RAPIDAPI_KEY to secrets
+
+async function fetchFromApiFootball(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
+  const apiKey = process.env.RAPIDAPI_KEY;
+  if (!apiKey) return null;
+
+  const json = await fetchJson(
+    `https://api-football-v1.p.rapidapi.com/v3/fixtures?date=${date}`,
+    15_000,
+    {
+      'X-RapidAPI-Key': apiKey,
+      'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com',
+    }
+  );
+  if (!json) return null;
+
+  for (const fixture of json.response ?? []) {
+    const statusShort: string = fixture.fixture?.status?.short ?? '';
+    if (!['FT', 'AET', 'PEN'].includes(statusShort)) continue;
+
+    const home: string = fixture.teams?.home?.name ?? '';
+    const away: string = fixture.teams?.away?.name ?? '';
+    const homeOk = teamsMatch(home, homeTeam) || teamsMatch(home, awayTeam);
+    const awayOk = teamsMatch(away, awayTeam) || teamsMatch(away, homeTeam);
+    if (!homeOk || !awayOk) continue;
+
+    const hs: number = fixture.goals?.home;
+    const as_: number = fixture.goals?.away;
+    if (hs === null || hs === undefined || as_ === null || as_ === undefined) continue;
+
+    if (teamsMatch(home, homeTeam)) return { homeScore: hs, awayScore: as_ };
+    return { homeScore: as_, awayScore: hs };
   }
   return null;
 }
@@ -187,6 +223,11 @@ export async function fetchScoreFromSportsDB(
   const espn = await fetchFromESPN(homeTeam, awayTeam, date);
   if (espn) { console.log(`  [Fetch] ESPN: ${espn.homeScore}-${espn.awayScore}`); return espn; }
   console.log(`  [Fetch] ESPN: no result`);
+
+  console.log(`  [Fetch] API-Football...`);
+  const apiFootball = await fetchFromApiFootball(homeTeam, awayTeam, date);
+  if (apiFootball) { console.log(`  [Fetch] API-Football: ${apiFootball.homeScore}-${apiFootball.awayScore}`); return apiFootball; }
+  console.log(`  [Fetch] API-Football: no result`);
 
   console.log(`  [Fetch] SofaScore...`);
   const sofa = await fetchFromSofaScore(homeTeam, awayTeam, date);
