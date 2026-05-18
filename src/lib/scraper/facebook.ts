@@ -209,6 +209,14 @@ export async function scrapeFbTicket(): Promise<{
     let winForDate: string | null = null;
 
     for (const post of posts) {
+      // Skip posts older than today — FB shows "· 1 d. ·" or "· 2 d. ·" for previous days
+      // Today's posts show "· Xh ·" (hours)
+      const isOldPost = /·\s*\d+\s*d[.\s·]/i.test(post.text);
+      if (isOldPost) {
+        console.log('[FB] Post is from a previous day (detected day-old timestamp) — skipping');
+        continue;
+      }
+
       // Always try to parse as a ticket first
       const ticket = parseTicketText(post.text, post.postId);
       if (ticket) {
