@@ -22,22 +22,35 @@ function inferMarket(pick: string, homeTeam: string, awayTeam: string): string {
   if (lower.includes('both teams to score') || lower === 'btts - yes') return 'BTTS';
   if (lower.includes('btts') && lower.includes('no')) return 'BTTS No';
 
-  const overMatch = lower.match(/over\s+(\d+\.?\d*)\s+goals?/);
-  if (overMatch) return `Over ${overMatch[1]}`;
+  // Pure over/under (no result condition)
+  if (!lower.includes('to win') && !lower.includes('draw')) {
+    const overMatch = lower.match(/over\s+(\d+\.?\d*)\s+goals?/);
+    if (overMatch) return `Over ${overMatch[1]}`;
 
-  const underMatch = lower.match(/under\s+(\d+\.?\d*)\s+goals?/);
-  if (underMatch) return `Under ${underMatch[1]}`;
+    const underMatch = lower.match(/under\s+(\d+\.?\d*)\s+goals?/);
+    if (underMatch) return `Under ${underMatch[1]}`;
+  }
 
-  if (lower.includes('draw')) return 'Draw';
+  if (lower.includes('draw') && !lower.includes('to win') && !lower.match(/over|under/)) return 'Draw';
 
   if (lower.includes('to win')) {
     const teamPart = pick.replace(/\s+to\s+win.*/i, '').trim();
     const nh = normalizeTeamName(homeTeam);
     const na = normalizeTeamName(awayTeam);
     const np = normalizeTeamName(teamPart);
-    if (nh && np && (nh === np || nh.includes(np) || np.includes(nh))) return 'Home';
-    if (na && np && (na === np || na.includes(np) || np.includes(na))) return 'Away';
-    return 'Away';
+    const result = (() => {
+      if (nh && np && (nh === np || nh.includes(np) || np.includes(nh))) return 'Home';
+      if (na && np && (na === np || na.includes(np) || np.includes(na))) return 'Away';
+      return 'Away';
+    })();
+
+    // Check for combined goals condition — return compound market so Gemini evaluates it
+    const overMatch = lower.match(/over\s+(\d+\.?\d*)/);
+    if (overMatch) return `${result} & Over ${overMatch[1]}`;
+    const underMatch = lower.match(/under\s+(\d+\.?\d*)/);
+    if (underMatch) return `${result} & Under ${underMatch[1]}`;
+
+    return result;
   }
 
   return pick;
