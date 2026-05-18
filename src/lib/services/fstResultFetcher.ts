@@ -80,6 +80,8 @@ const ESPN_LEAGUES = [
   'eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1',
   'ned.1', 'por.1', 'tur.1', 'bel.1', 'sco.1',
   'usa.1', 'gre.1', 'aut.1', 'hrv.1',
+  'swe.1', 'nor.1', 'den.1', 'fin.1',  // Nordic leagues
+  'srb.1', 'svn.1', 'che.1', 'cze.1',  // Other European
   'UEFA.CHAMPIONS_LEAGUE', 'UEFA.EUROPA', 'UEFA.EUROPA_CONFERENCE_LEAGUE',
 ];
 
@@ -131,7 +133,7 @@ async function fetchFromSofaScore(homeTeam: string, awayTeam: string, date: stri
   const json = await fetchJson(
     `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
     10_000,
-    { 'Accept': 'application/json' }
+    { 'Accept': 'application/json', 'Referer': 'https://www.sofascore.com/' }
   );
   if (!json) return null;
 
