@@ -49,16 +49,13 @@ export async function saveFbTicket(
   });
 
   const incomingPairs = ticket.selections
-    .map((s) => `${normalizeTeam(s.homeTeam)}-${normalizeTeam(s.awayTeam)}`)
-    .sort()
-    .join('|');
+    .map((s) => `${normalizeTeam(s.homeTeam)}-${normalizeTeam(s.awayTeam)}`);
 
   for (const recent of recentTickets) {
     const existingPairs = recent.selections
-      .map((s) => `${normalizeTeam(s.homeTeam)}-${normalizeTeam(s.awayTeam)}`)
-      .sort()
-      .join('|');
-    if (existingPairs === incomingPairs) return { saved: false, alreadyExists: true };
+      .map((s) => `${normalizeTeam(s.homeTeam)}-${normalizeTeam(s.awayTeam)}`);
+    const matchCount = incomingPairs.filter((p) => existingPairs.includes(p)).length;
+    if (matchCount >= 2) return { saved: false, alreadyExists: true };
   }
 
   await prisma.fbTicket.create({

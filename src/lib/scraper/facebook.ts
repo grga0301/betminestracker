@@ -111,7 +111,15 @@ function extractTicketFromText(
     const end = nextOccurrence === Infinity
       ? Math.min(pageText.length, firstIdx + 900)
       : nextOccurrence;
-    posts.push({ text: pageText.slice(firstIdx, end), postId: postIds[0] ?? '' });
+
+    // Check timestamp in the 300 chars BEFORE TODAY_TICKET (where FB puts "· 8 h ·" or "· 1 d. ·")
+    const before = pageText.slice(Math.max(0, firstIdx - 300), firstIdx);
+    const isOldPost = /·\s*\d+\s*d[.\s·]/i.test(before);
+    if (isOldPost) {
+      console.log('[FB] Post is from a previous day (timestamp check) — skipping');
+    } else {
+      posts.push({ text: pageText.slice(firstIdx, end), postId: postIds[0] ?? '' });
+    }
   }
 
   const winIdx = upperPage.indexOf('WIIIIIN');
@@ -130,12 +138,6 @@ function extractTicketFromText(
   let winForDate: string | null = null;
 
   for (const post of posts) {
-    const isOldPost = /·\s*\d+\s*d[.\s·]/i.test(post.text);
-    if (isOldPost) {
-      console.log('[FB] Post is from a previous day — skipping');
-      continue;
-    }
-
     const ticket = parseTicketText(post.text, post.postId);
     if (ticket) {
       todayTicket = ticket;
