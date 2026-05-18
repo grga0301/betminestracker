@@ -151,14 +151,26 @@ async function fetchFromSportApi7(homeTeam: string, awayTeam: string, date: stri
   );
   if (!json) return null;
 
-  for (const event of json.events ?? []) {
-    const statusCode: number = event.status?.code ?? 0;
-    if (statusCode !== 100 && statusCode !== 110 && statusCode !== 120) continue;
+  const events: any[] = json.events ?? [];
+  console.log(`  [SportAPI7] Total events: ${events.length}`);
+  if (events.length > 0) {
+    const sample = events[0];
+    console.log(`  [SportAPI7] Sample: ${sample.homeTeam?.name} vs ${sample.awayTeam?.name}, status code: ${sample.status?.code}`);
+  }
 
+  for (const event of events) {
+    const statusCode: number = event.status?.code ?? 0;
     const evHome: string = event.homeTeam?.name ?? '';
     const evAway: string = event.awayTeam?.name ?? '';
     const homeOk = teamsMatch(evHome, homeTeam) || teamsMatch(evHome, awayTeam);
     const awayOk = teamsMatch(evAway, awayTeam) || teamsMatch(evAway, homeTeam);
+
+    // Log when we find the match (regardless of status)
+    if (homeOk && awayOk) {
+      console.log(`  [SportAPI7] Found match: ${evHome} vs ${evAway}, status: ${statusCode}, score: ${event.homeScore?.current}-${event.awayScore?.current}`);
+    }
+
+    if (statusCode !== 100 && statusCode !== 110 && statusCode !== 120) continue;
     if (!homeOk || !awayOk) continue;
 
     const hs = event.homeScore?.current ?? event.homeScore?.normaltime;
