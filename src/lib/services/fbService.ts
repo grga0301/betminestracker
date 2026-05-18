@@ -28,11 +28,38 @@ export interface FbStats {
   avgOdds: number;
 }
 
+function normalizeTeam(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export async function saveFbTicket(
   ticket: FbScrapedTicket
 ): Promise<{ saved: boolean; alreadyExists: boolean }> {
+  // Check by date first
   const existing = await prisma.fbTicket.findUnique({ where: { date: ticket.date } });
   if (existing) return { saved: false, alreadyExists: true };
+
+  // Check if same team pairs exist in any recent ticket (last 3 days)
+  // Prevents saving yesterday's ticket again when FB shows it as most recent
+  const recentDate = new Date();
+  recentDate.setDate(recentDate.getDate() - 3);
+  const recentTickets = await prisma.fbTicket.findMany({
+    where: { date: { gte: recentDate.toISOString().split('T')[0] } },
+    include: { selections: true },
+  });
+
+  const incomingPairs = ticket.selections
+    .map((s) => `${normalizeTeam(s.homeTeam)}-${normalizeTeam(s.awayTeam)}`)
+    .sort()
+    .join('|');
+
+  for (const recent of recentTickets) {
+    const existingPairs = recent.selections
+      .map((s) => `${normalizeTeam(s.homeTeam)}-${normalizeTeam(s.awayTeam)}`)
+      .sort()
+      .join('|');
+    if (existingPairs === incomingPairs) return { saved: false, alreadyExists: true };
+  }
 
   await prisma.fbTicket.create({
     data: {
