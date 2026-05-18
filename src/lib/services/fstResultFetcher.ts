@@ -183,6 +183,37 @@ async function fetchFromSportApi7(homeTeam: string, awayTeam: string, date: stri
   return null;
 }
 
+// ── API-Football (api-sports.io) ──────────────────────────────────────────────
+// 100 free requests/day — use as fallback only
+
+async function fetchFromApiFootball(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
+  const apiKey = process.env.API_FOOTBALL_KEY;
+  if (!apiKey) return null;
+
+  const json = await fetchJson(
+    `https://v3.football.api-sports.io/fixtures?date=${date}&status=FT-AET-PEN`,
+    15_000,
+    { 'x-apisports-key': apiKey }
+  );
+  if (!json) return null;
+
+  for (const item of json.response ?? []) {
+    const evHome: string = item.teams?.home?.name ?? '';
+    const evAway: string = item.teams?.away?.name ?? '';
+    const homeOk = teamsMatch(evHome, homeTeam) || teamsMatch(evHome, awayTeam);
+    const awayOk = teamsMatch(evAway, awayTeam) || teamsMatch(evAway, homeTeam);
+    if (!homeOk || !awayOk) continue;
+
+    const hs = item.goals?.home ?? item.score?.fulltime?.home;
+    const as_ = item.goals?.away ?? item.score?.fulltime?.away;
+    if (hs === null || hs === undefined || as_ === null || as_ === undefined) continue;
+
+    if (teamsMatch(evHome, homeTeam)) return { homeScore: hs, awayScore: as_ };
+    return { homeScore: as_, awayScore: hs };
+  }
+  return null;
+}
+
 // ── SofaScore ────────────────────────────────────────────────────────────────
 // Covers all leagues globally, no API key required
 
@@ -245,6 +276,13 @@ export async function fetchScoreFromSportsDB(
   const sofa = await fetchFromSofaScore(homeTeam, awayTeam, date);
   if (sofa) { console.log(`  [Fetch] SofaScore: ${sofa.homeScore}-${sofa.awayScore}`); return sofa; }
   console.log(`  [Fetch] SofaScore: no result`);
+
+  if (process.env.API_FOOTBALL_KEY) {
+    console.log(`  [Fetch] API-Football...`);
+    const apiFb = await fetchFromApiFootball(homeTeam, awayTeam, date);
+    if (apiFb) { console.log(`  [Fetch] API-Football: ${apiFb.homeScore}-${apiFb.awayScore}`); return apiFb; }
+    console.log(`  [Fetch] API-Football: no result`);
+  }
 
   // Final fallback: Gemini with Google Search grounding
   if (process.env.GEMINI_API_KEY) {
