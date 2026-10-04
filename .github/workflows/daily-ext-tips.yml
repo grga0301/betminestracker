@@ -20,15 +20,17 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Scrape Forebet + TipOracle
+      - name: Scrape Forebet + TipOracle + FootyAccumulators
         run: npm run scrape:ext
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
 
       - name: Resolve pending external tips
         run: npm run resolve:ext
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}

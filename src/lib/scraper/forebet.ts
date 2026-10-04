@@ -78,7 +78,7 @@ export function selectForebetPicks(rows: ForebetRow[], n = FOREBET_PICKS_PER_DAY
 }
 
 // Forebet answers 403 to Node's fetch (TLS fingerprint) but not to curl, so shell out to curl.
-async function fetchHtml(url: string): Promise<string> {
+async function fetchViaCurl(url: string): Promise<string> {
   const { stdout } = await execFileAsync(
     'curl',
     ['-sL', '--max-time', '30', '-A', UA, '-H', 'Accept-Language: en', '-w', '\n%{http_code}', url],
@@ -87,7 +87,37 @@ async function fetchHtml(url: string): Promise<string> {
   const i = stdout.lastIndexOf('\n');
   const code = stdout.slice(i + 1).trim();
   if (code !== '200') throw new Error(`Forebet HTTP ${code} for ${url}`);
-  return stdout.slice(0, i);
+  const html = stdout.slice(0, i);
+  if (html.includes('Just a moment...')) throw new Error(`Forebet Cloudflare challenge for ${url}`);
+  return html;
+}
+
+// GitHub's datacenter IPs are blocked by Forebet's Cloudflare; Jina Reader (browser engine) fetches
+// from its own network. Needs JINA_API_KEY (free key from jina.ai).
+async function fetchViaJina(url: string): Promise<string> {
+  const key = process.env.JINA_API_KEY;
+  if (!key) throw new Error('JINA_API_KEY not set');
+  const res = await fetch(`https://r.jina.ai/${url}`, {
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'X-Return-Format': 'html',
+      'X-Engine': 'browser',
+      'X-Timeout': '45',
+    },
+  });
+  if (!res.ok) throw new Error(`Jina HTTP ${res.status} for ${url}`);
+  const html = await res.text();
+  if (html.includes('Just a moment...') || !html.includes('rcnt')) throw new Error(`Jina returned no Forebet rows for ${url}`);
+  return html;
+}
+
+async function fetchHtml(url: string): Promise<string> {
+  try {
+    return await fetchViaCurl(url);
+  } catch (err) {
+    console.log(`  [Forebet] curl failed (${err instanceof Error ? err.message : err}) — trying Jina`);
+    return fetchViaJina(url);
+  }
 }
 
 /** Today's picks (only matches that have not started yet). */
