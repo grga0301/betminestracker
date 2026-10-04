@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { StatsBar } from '@/components/StatsBar';
 import { DoubleCard } from '@/components/DoubleCard';
@@ -52,6 +53,12 @@ export default function HomePage() {
       <Header onRefresh={fetchData} />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex justify-end mb-3">
+          <Link href="/dashboard" className="text-[11px] uppercase tracking-wider text-[var(--accent)] hover:underline">
+            Dashboard →
+          </Link>
+        </div>
+
         {/* Stats */}
         <StatsBar stats={stats} />
 
