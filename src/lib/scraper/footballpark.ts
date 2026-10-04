@@ -44,5 +44,11 @@ export function parseFootballPark(html: string): ExtScrapedTip[] {
 export async function scrapeFootballParkToday(): Promise<ExtScrapedTip[]> {
   const res = await fetch(URL, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' } });
   if (!res.ok) throw new Error(`footballpark HTTP ${res.status}`);
-  return parseFootballPark(await res.text());
+  const html = await res.text();
+  const tips = parseFootballPark(html);
+  if (tips.length === 0 && !html.includes('botd-card')) {
+    const title = html.match(/<title>([^<]*)/)?.[1] ?? '(no title)';
+    throw new Error(`footballpark: no pick card in page (${html.length} bytes, title "${title}")`);
+  }
+  return tips;
 }
