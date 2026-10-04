@@ -92,3 +92,28 @@ model FtTip {
   scrapedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Tips from third-party tipster sites (source = "FOREBET" | "TIPORACLE"), several picks per day.
+model ExtTip {
+  id         Int      @id @default(autoincrement())
+  source     String
+  date       String
+  rank       Int
+  homeTeam   String
+  awayTeam   String
+  league     String   @default("")
+  market     String
+  pick       String
+  kickoff    String   @default("")
+  odd        Float    @default(0)
+  confidence Int?
+  sourceUrl  String?
+  status     String   @default("PENDING")
+  homeScore  Int?
+  awayScore  Int?
+  scrapedAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([source, date, rank])
+  @@index([source, status])
+}

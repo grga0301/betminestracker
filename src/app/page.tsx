@@ -8,6 +8,7 @@ import { DoubleCard } from '@/components/DoubleCard';
 import { FstSection } from '@/components/FstSection';
 import { FbSection } from '@/components/FbSection';
 import { FtSection } from '@/components/FtSection';
+import { ExtSection } from '@/components/ExtSection';
 import type { DoubleRecord, Stats } from '@/lib/types';
 
 const DEFAULT_STATS: Stats = {
@@ -122,6 +123,17 @@ export default function HomePage() {
 
         {/* FreeTips.com section — always shown */}
         <FtSection />
+
+        <ExtSection
+          source="FOREBET"
+          title="Forebet · Top 3 Picks"
+          blurb="Algorithmic 1X2 predictions; the three most probable picks per day with odds ≥ 1.30."
+        />
+        <ExtSection
+          source="TIPORACLE"
+          title="TipOracle · Best Betting Tips"
+          blurb="The three headline tips TipOracle publishes each day (mixed markets)."
+        />
 
         {/* Facebook IceHockeyBet section — always shown */}
         <FbSection />
