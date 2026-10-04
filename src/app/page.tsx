@@ -131,20 +131,15 @@ export default function HomePage() {
         <FtSection />
 
         <ExtSection
-          source="FOREBET"
-          title="Forebet · Top 3 Picks"
-          blurb="Algorithmic 1X2 predictions; the three most probable picks per day with odds ≥ 1.30."
-        />
-        <ExtSection
-          source="TIPORACLE"
-          title="TipOracle · Best Betting Tips"
-          blurb="The three headline tips TipOracle publishes each day (mixed markets)."
-        />
-
-        <ExtSection
           source="FOOTYACCA"
           title="FootyAccumulators · Bet of the Day"
           blurb="One featured bet per day, published the day before (often a combined market)."
+        />
+
+        <ExtSection
+          source="FOOTBALLPARK"
+          title="FootballPark · Bet of the Day"
+          blurb="One single banker pick per day (usually 1X2) with odds."
         />
 
         {!loading && !error && doubles.length === 0 && (

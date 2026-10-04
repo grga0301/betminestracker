@@ -1,11 +1,11 @@
 // src/lib/services/extTipService.ts
-// DB access for tips from third-party tipster sites (Forebet, TipOracle).
+// DB access for tips from third-party tipster sites (TipOracle, FootyAccumulators, FootballPark).
 
 import { prisma } from '../db/prisma';
 import type { ExtScrapedTip } from '../scraper/tiporacle';
 
-export type ExtSource = 'FOREBET' | 'TIPORACLE' | 'FOOTYACCA';
-export const EXT_SOURCES: ExtSource[] = ['FOREBET', 'TIPORACLE', 'FOOTYACCA'];
+export type ExtSource = 'TIPORACLE' | 'FOOTYACCA' | 'FOOTBALLPARK';
+export const EXT_SOURCES: ExtSource[] = ['TIPORACLE', 'FOOTYACCA', 'FOOTBALLPARK'];
 
 export interface ExtTipRecord {
   id: number;

@@ -1,5 +1,5 @@
 // src/lib/services/extTipEvaluator.ts
-// Settles tips written in the vocabulary of Forebet / TipOracle / FootyAccumulators
+// Settles tips written in the vocabulary of TipOracle / FootyAccumulators / FootballPark
 // ("Home Win", "No Goal", "Over 2.5", "Sweden Win & Over 2.5" …).
 // Returns null for markets it cannot settle, so the tip stays PENDING instead of being counted as VOID.
 

@@ -134,8 +134,8 @@ export async function getDashboard(): Promise<SourceSummary[]> {
     summarize('betmines', 'BetMines Double', norm(doubles, (r) => r.totalOdds)),
     summarize('fst', 'FreeSuperTips', norm(fst, (r) => r.odd)),
     summarize('ft', 'FreeTips.com', norm(ft, (r) => r.odd)),
-    summarize('forebet', 'Forebet Top 3', extBy('FOREBET')),
     summarize('tiporacle', 'TipOracle', extBy('TIPORACLE')),
     summarize('footyacca', 'FootyAccumulators', extBy('FOOTYACCA')),
+    summarize('footballpark', 'FootballPark', extBy('FOOTBALLPARK')),
   ];
 }

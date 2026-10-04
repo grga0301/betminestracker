@@ -1,7 +1,6 @@
 // scripts/resolve-ext.ts — npm run resolve:ext
 import { getPendingExtTips, updateExtTipResult } from '../src/lib/services/extTipService';
 import { evaluateExtMarket } from '../src/lib/services/extTipEvaluator';
-import { fetchForebetResult } from '../src/lib/scraper/forebet';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { evaluateWithGemini } from '../src/lib/services/geminiEvaluator';
 
@@ -16,12 +15,7 @@ async function main() {
     if (tip.date < cutoff) continue;
     console.log(`─── ${tip.source} ${tip.date}: ${tip.homeTeam} vs ${tip.awayTeam} | ${tip.market}`);
 
-    // Forebet has its own result page; every source falls back to the generic score cascade.
-    let score =
-      tip.source === 'FOREBET' && tip.sourceUrl
-        ? await fetchForebetResult(tip.sourceUrl).catch(() => null)
-        : null;
-    score ??= await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
+    const score = await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
 
     if (!score) {
       console.log('  ⏳ no final score yet — keeping PENDING\n');
