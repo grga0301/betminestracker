@@ -64,11 +64,16 @@ export function parseFootyAccumulators(html: string, cat: FaCategory = FA_CATEGO
   // Only tickets whose first match has not kicked off yet — a tip first seen later proves nothing.
   const now = Date.now();
   const kickoffs = (t: TipperTip) => (t.meta.grid ?? []).map((g) => g.match.date_iso).sort();
-  const upcoming = findTips(JSON.parse(json), cat.title)
+  const all = findTips(JSON.parse(json), cat.title);
+  const upcoming = all
     .filter((t) => kickoffs(t).length > 0 && new Date(kickoffs(t)[0]).getTime() > now)
     .sort((a, b) => kickoffs(a)[0].localeCompare(kickoffs(b)[0]));
   const tip = upcoming[0];
-  if (!tip) return [];
+  if (!tip) {
+    const seen = all.map((t) => `"${t.meta.title}" first kickoff ${kickoffs(t)[0] ?? 'n/a'}`).join('; ') || 'no matching tip in page';
+    console.log(`  [FA ${cat.path}] nothing upcoming — ${seen}`);
+    return [];
+  }
 
   const grid = [...(tip.meta.grid ?? [])].sort((a, b) => a.match.date_iso.localeCompare(b.match.date_iso));
   const first = grid[0];

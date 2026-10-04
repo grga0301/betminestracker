@@ -72,10 +72,20 @@ export function parseTipOracle(html: string, date: string): ExtScrapedTip[] {
   return tips;
 }
 
+const TO_URL = 'https://www.tiporacle.com/';
+
+// tiporacle.com sometimes refuses GitHub's datacenter IPs (403); r.jina.ai fetches it from its own network.
+async function fetchTipOracleHtml(): Promise<string> {
+  const direct = await fetch(TO_URL, { headers: { 'User-Agent': UA } });
+  if (direct.ok) return direct.text();
+  console.log(`  [TipOracle] direct fetch returned ${direct.status} — retrying via r.jina.ai`);
+  const proxied = await fetch(`https://r.jina.ai/${TO_URL}`, { headers: { 'X-Return-Format': 'html' } });
+  if (!proxied.ok) throw new Error(`TipOracle HTTP ${direct.status} direct, ${proxied.status} via proxy`);
+  return proxied.text();
+}
+
 export async function scrapeTipOracleToday(): Promise<ExtScrapedTip[]> {
-  const res = await fetch('https://www.tiporacle.com/', { headers: { 'User-Agent': UA } });
-  if (!res.ok) throw new Error(`TipOracle HTTP ${res.status}`);
-  const html = await res.text();
+  const html = await fetchTipOracleHtml();
   // The hero shows "Football Prediction Tips · 4 October 2026" — trust that over the server clock.
   const m = html.match(/Football Prediction Tips\s*·\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
   const date = m
