@@ -1,6 +1,7 @@
 // src/app/dashboard/page.tsx
 import Link from 'next/link';
 import { getDashboard, type SourceSummary } from '@/lib/services/dashboardService';
+import { ALERT_STREAK } from '@/lib/streak';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +23,8 @@ export default async function DashboardPage() {
   const active = sources.filter((s) => s.total > 0);
   // Every source with data is listed; ones without a resolved tip yet sink to the bottom.
   const ranked = [...active].sort((a, b) => (b.roi ?? -Infinity) - (a.roi ?? -Infinity));
-  const worstStreak = [...active]
-    .filter((s) => s.currentStreak.type === 'LOSS')
-    .sort((a, b) => b.currentStreak.days - a.currentStreak.days)[0];
+  const onStreak = (s: SourceSummary) => s.currentStreak.type === 'LOSS' && s.currentStreak.tickets >= ALERT_STREAK;
+  const alerts = active.filter(onStreak);
 
   return (
     <div className="min-h-screen relative z-10">
@@ -40,11 +40,17 @@ export default async function DashboardPage() {
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {error && <p className="text-red-400 text-sm">⚠ Ne mogu učitati podatke iz baze.</p>}
 
-        {worstStreak && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            🔴 Najduži trenutni pad: <strong>{worstStreak.label}</strong> —{' '}
-            {worstStreak.currentStreak.days} {worstStreak.currentStreak.days === 1 ? 'dan' : 'dana'} zaredom bez
-            pogođenog tiketa ({worstStreak.currentStreak.tickets} tiketa).
+        {alerts.length > 0 && (
+          <div className="rounded-xl border-2 border-red-500/60 bg-red-500/15 px-4 py-3" role="alert">
+            <p className="text-sm font-bold text-red-300">🚨 Niz gubitaka ({ALERT_STREAK}+ tipa zaredom)</p>
+            <ul className="mt-1 space-y-0.5">
+              {alerts.map((s) => (
+                <li key={s.key} className="text-sm text-red-200">
+                  <strong>{s.label}</strong>: {s.currentStreak.tickets} zaredom pogrešno ({s.currentStreak.days}{' '}
+                  {s.currentStreak.days === 1 ? 'dan' : 'dana'})
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -69,7 +75,10 @@ export default async function DashboardPage() {
                 </thead>
                 <tbody>
                   {ranked.map((s) => (
-                    <tr key={s.key} className="border-b border-white/5 last:border-0">
+                    <tr
+                      key={s.key}
+                      className={`border-b border-white/5 last:border-0 ${onStreak(s) ? 'bg-red-500/15' : ''}`}
+                    >
                       <td className="px-4 py-2 text-[var(--chalk)]">
                         {s.label}
                         {s.winRate === null && (
@@ -99,7 +108,7 @@ export default async function DashboardPage() {
         {/* Per-source cards */}
         <section className="grid md:grid-cols-2 gap-4">
           {sources.map((s) => (
-            <SourceCard key={s.key} s={s} />
+            <SourceCard key={s.key} s={s} alert={onStreak(s)} />
           ))}
         </section>
       </main>
@@ -119,7 +128,7 @@ function Streak({ s }: { s: SourceSummary }) {
   );
 }
 
-function SourceCard({ s }: { s: SourceSummary }) {
+function SourceCard({ s, alert }: { s: SourceSummary; alert: boolean }) {
   if (s.total === 0) {
     return (
       <div className="card p-5 opacity-60">
@@ -130,7 +139,10 @@ function SourceCard({ s }: { s: SourceSummary }) {
   }
   const c = s.currentStreak;
   return (
-    <div className="card p-5">
+    <div className={`card p-5 ${alert ? 'border-2 border-red-500/60 bg-red-500/10' : ''}`}>
+      {alert && (
+        <p className="mb-3 text-xs font-bold text-red-300">🚨 {c.tickets} gubitaka zaredom</p>
+      )}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="text-sm font-medium text-[var(--chalk)]">{s.label}</h3>

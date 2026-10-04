@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { ExtSource, ExtStats, ExtTipRecord } from '@/lib/services/extTipService';
 import { StatusBadge } from './StatusBadge';
+import { ALERT_STREAK } from '@/lib/streak';
 
 interface Props {
   source: ExtSource;
@@ -37,9 +38,27 @@ export function ExtSection({ source, title, blurb }: Props) {
 
   const decided = stats ? stats.wins + stats.losses : 0;
 
+  // Tips (newest first) that make up the current losing streak, once it reaches the alert threshold.
+  const streakLen = stats?.streakType === 'LOSS' ? stats.currentStreak : 0;
+  const streakIds = new Set<number>();
+  if (streakLen >= ALERT_STREAK) {
+    for (const t of tips) {
+      if (streakIds.size >= streakLen) break;
+      if (t.status === 'LOSS') streakIds.add(t.id);
+      else if (t.status === 'WIN') break;
+    }
+  }
+
   return (
     <section className="mt-12">
-      <h2 className="text-xs uppercase tracking-widest text-[var(--chalk-dim)]">{title}</h2>
+      <h2 className="text-xs uppercase tracking-widest text-[var(--chalk-dim)]">
+        {title}
+        {streakLen >= ALERT_STREAK && (
+          <span className="ml-3 rounded bg-red-500/20 border border-red-500/50 px-2 py-0.5 text-[10px] font-bold text-red-300 normal-case tracking-normal">
+            🚨 {streakLen} gubitaka zaredom
+          </span>
+        )}
+      </h2>
       <p className="text-[11px] text-[var(--chalk-dim)]/70 mt-1 mb-4">{blurb}</p>
 
       {stats && stats.total > 0 && (
@@ -84,7 +103,12 @@ export function ExtSection({ source, title, blurb }: Props) {
             <p className="text-[10px] uppercase tracking-widest text-[var(--chalk-dim)] mb-2">{formatDate(date)}</p>
             <div className="divide-y divide-white/5">
               {list.map((t) => (
-                <div key={t.id} className="py-2 flex items-center justify-between gap-3">
+                <div
+                  key={t.id}
+                  className={`py-2 flex items-center justify-between gap-3 ${
+                    streakIds.has(t.id) ? 'border-l-4 border-red-500 pl-3 bg-red-500/10' : ''
+                  }`}
+                >
                   <div className="min-w-0">
                     {t.legs ? (
                       <div className="space-y-0.5">
