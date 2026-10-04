@@ -45,7 +45,7 @@ function findBetOfTheDay(node: unknown): TipperTip | null {
 }
 
 export function parseFootyAccumulators(html: string): ExtScrapedTip[] {
-  const json = html.match(/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/s)?.[1];
+  const json = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)?.[1];
   if (!json) throw new Error('footyaccumulators: __NEXT_DATA__ not found (page layout changed?)');
   const tip = findBetOfTheDay(JSON.parse(json));
   const leg = tip?.meta.grid?.[0];
