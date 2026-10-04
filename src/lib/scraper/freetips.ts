@@ -50,17 +50,30 @@ export interface FtScrapedTip {
   odd: number;
 }
 
-export async function scrapeFtBetOfTheDay(): Promise<FtScrapedTip> {
-  const res = await fetch('https://www.freetips.com/betting/bet-of-the-day/', {
+const FT_URL = 'https://www.freetips.com/betting/bet-of-the-day/';
+
+// freetips.com answers 403 to GitHub's datacenter IPs. r.jina.ai (free reader proxy) fetches it
+// from its own network and returns the raw HTML, so use it when the direct request is refused.
+async function fetchFreeTipsHtml(): Promise<string> {
+  const direct = await fetch(FT_URL, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml',
       'Accept-Language': 'en-US,en;q=0.9',
     },
   });
+  if (direct.ok) return direct.text();
 
-  if (!res.ok) throw new Error(`freetips.com returned ${res.status}`);
-  const html = await res.text();
+  console.log(`  [FT] direct fetch returned ${direct.status} — retrying via r.jina.ai`);
+  const proxied = await fetch(`https://r.jina.ai/${FT_URL}`, {
+    headers: { 'X-Return-Format': 'html', ...(process.env.JINA_API_KEY ? { Authorization: `Bearer ${process.env.JINA_API_KEY}` } : {}) },
+  });
+  if (!proxied.ok) throw new Error(`freetips.com returned ${direct.status}, proxy returned ${proxied.status}`);
+  return proxied.text();
+}
+
+export async function scrapeFtBetOfTheDay(): Promise<FtScrapedTip> {
+  const html = await fetchFreeTipsHtml();
   const root = parse(html);
 
   // Teams: .m-name → "Djurgarden v Sirius"
