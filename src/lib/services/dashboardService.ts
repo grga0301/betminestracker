@@ -118,9 +118,8 @@ export function summarize(key: string, label: string, tips: NormTip[], today = n
 }
 
 export async function getDashboard(): Promise<SourceSummary[]> {
-  const [doubles, fb, fst, ft, ext] = await Promise.all([
+  const [doubles, fst, ft, ext] = await Promise.all([
     prisma.betDouble.findMany({ select: { date: true, status: true, totalOdds: true } }),
-    prisma.fbTicket.findMany({ select: { date: true, status: true, totalOdds: true } }),
     prisma.fstTip.findMany({ select: { date: true, status: true, odd: true } }),
     prisma.ftTip.findMany({ select: { date: true, status: true, odd: true } }),
     prisma.extTip.findMany({ select: { source: true, date: true, status: true, odd: true } }),
@@ -135,7 +134,6 @@ export async function getDashboard(): Promise<SourceSummary[]> {
     summarize('betmines', 'BetMines Double', norm(doubles, (r) => r.totalOdds)),
     summarize('fst', 'FreeSuperTips', norm(fst, (r) => r.odd)),
     summarize('ft', 'FreeTips.com', norm(ft, (r) => r.odd)),
-    summarize('fb', 'Facebook IceHockeyBet', norm(fb, (r) => r.totalOdds)),
     summarize('forebet', 'Forebet Top 3', extBy('FOREBET')),
     summarize('tiporacle', 'TipOracle', extBy('TIPORACLE')),
     summarize('footyacca', 'FootyAccumulators', extBy('FOOTYACCA')),

@@ -7,7 +7,6 @@ import { Header } from '@/components/Header';
 import { StatsBar } from '@/components/StatsBar';
 import { DoubleCard } from '@/components/DoubleCard';
 import { FstSection } from '@/components/FstSection';
-import { FbSection } from '@/components/FbSection';
 import { FtSection } from '@/components/FtSection';
 import { ExtSection } from '@/components/ExtSection';
 import type { DoubleRecord, Stats } from '@/lib/types';
@@ -147,9 +146,6 @@ export default function HomePage() {
           title="FootyAccumulators · Bet of the Day"
           blurb="One featured bet per day, published the day before (often a combined market)."
         />
-
-        {/* Facebook IceHockeyBet section — always shown */}
-        <FbSection />
 
         {!loading && !error && doubles.length === 0 && (
           <div className="pb-12" />

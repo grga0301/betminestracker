@@ -11,7 +11,6 @@
     "resolve": "tsx scripts/resolve.ts",
     "scrape:fst": "tsx scripts/scrape-fst.ts",
     "resolve:fst": "tsx scripts/resolve-fst.ts",
-    "scrape:fb": "tsx scripts/scrape-fb.ts",
     "scrape:ft": "tsx scripts/scrape-ft.ts",
     "resolve:ft": "tsx scripts/resolve-ft.ts",
     "scrape:ext": "tsx scripts/scrape-ext.ts",

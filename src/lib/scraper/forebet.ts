@@ -107,7 +107,10 @@ async function fetchViaJina(url: string): Promise<string> {
   });
   if (!res.ok) throw new Error(`Jina HTTP ${res.status} for ${url}`);
   const html = await res.text();
-  if (html.includes('Just a moment...') || !html.includes('rcnt')) throw new Error(`Jina returned no Forebet rows for ${url}`);
+  if (html.includes('Just a moment...') || !html.includes('rcnt')) {
+    const title = html.match(/<title>([^<]*)/)?.[1] ?? '(no title)';
+    throw new Error(`Jina returned no Forebet rows for ${url} — ${html.length} bytes, title "${title}"`);
+  }
   return html;
 }
 

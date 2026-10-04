@@ -39,6 +39,7 @@ model BetSelection {
   updatedAt    DateTime  @updatedAt
 }
 
+// Legacy: Facebook tickets were removed from the app; tables kept so old data is not lost.
 model FbTicket {
   id         Int           @id @default(autoincrement())
   date       String        @unique

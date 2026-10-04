@@ -23,31 +23,29 @@ function fractionToDecimal(f: string | undefined): number {
   return isNaN(n) ? 0 : n;
 }
 
-/** Finds Tipster widgets anywhere in the page JSON and returns the "Bet of the Day" tip. */
-function findBetOfTheDay(node: unknown): TipperTip | null {
+/** Collects every "Bet of the Day" tip from any Tipster widget in the page JSON. */
+function findBetsOfTheDay(node: unknown, out: TipperTip[] = []): TipperTip[] {
   if (Array.isArray(node)) {
-    for (const v of node) {
-      const r = findBetOfTheDay(v);
-      if (r) return r;
-    }
+    for (const v of node) findBetsOfTheDay(v, out);
   } else if (node && typeof node === 'object') {
     const o = node as Record<string, any>;
     if (o.component === 'Tipster' && Array.isArray(o.data?.tips)) {
-      const hit = o.data.tips.find((t: TipperTip) => /bet of the day/i.test(t.meta?.title ?? ''));
-      if (hit) return hit;
+      out.push(...o.data.tips.filter((t: TipperTip) => /bet of the day/i.test(t.meta?.title ?? '')));
     }
-    for (const v of Object.values(o)) {
-      const r = findBetOfTheDay(v);
-      if (r) return r;
-    }
+    for (const v of Object.values(o)) findBetsOfTheDay(v, out);
   }
-  return null;
+  return out;
 }
 
 export function parseFootyAccumulators(html: string): ExtScrapedTip[] {
   const json = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/)?.[1];
   if (!json) throw new Error('footyaccumulators: __NEXT_DATA__ not found (page layout changed?)');
-  const tip = findBetOfTheDay(JSON.parse(json));
+  // Only tips for matches that have not kicked off yet — a tip first seen after kickoff proves nothing.
+  const now = Date.now();
+  const upcoming = findBetsOfTheDay(JSON.parse(json))
+    .filter((t) => t.meta.grid?.[0] && new Date(t.meta.grid[0].match.date_iso).getTime() > now)
+    .sort((a, b) => a.meta.grid![0].match.date_iso.localeCompare(b.meta.grid![0].match.date_iso));
+  const tip = upcoming[0];
   const leg = tip?.meta.grid?.[0];
   if (!tip || !leg) return [];
 
