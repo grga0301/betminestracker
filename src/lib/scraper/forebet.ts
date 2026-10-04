@@ -114,13 +114,35 @@ async function fetchViaJina(url: string): Promise<string> {
   return html;
 }
 
-async function fetchHtml(url: string): Promise<string> {
-  try {
-    return await fetchViaCurl(url);
-  } catch (err) {
-    console.log(`  [Forebet] curl failed (${err instanceof Error ? err.message : err}) — trying Jina`);
-    return fetchViaJina(url);
+// Cloudflare Worker relay (see cloudflare/forebet-proxy.js): needs FOREBET_PROXY_URL + FOREBET_PROXY_TOKEN.
+async function fetchViaWorker(url: string): Promise<string> {
+  const base = process.env.FOREBET_PROXY_URL;
+  const token = process.env.FOREBET_PROXY_TOKEN;
+  if (!base || !token) throw new Error('FOREBET_PROXY_URL / FOREBET_PROXY_TOKEN not set');
+  const res = await fetch(`${base}?url=${encodeURIComponent(url)}`, { headers: { 'x-proxy-token': token } });
+  if (!res.ok) throw new Error(`Worker HTTP ${res.status} for ${url}`);
+  const html = await res.text();
+  if (html.includes('Just a moment...') || !html.includes('rcnt')) {
+    throw new Error(`Worker returned no Forebet rows for ${url} — ${html.length} bytes`);
   }
+  return html;
+}
+
+async function fetchHtml(url: string): Promise<string> {
+  const attempts: [string, (u: string) => Promise<string>][] = [
+    ['curl', fetchViaCurl],
+    ['worker', fetchViaWorker],
+    ['jina', fetchViaJina],
+  ];
+  const errors: string[] = [];
+  for (const [name, fn] of attempts) {
+    try {
+      return await fn(url);
+    } catch (err) {
+      errors.push(`${name}: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+  throw new Error(`Forebet unreachable — ${errors.join(' | ')}`);
 }
 
 /** Today's picks (only matches that have not started yet). */
