@@ -4,8 +4,8 @@
 import { prisma } from '../db/prisma';
 import type { ExtScrapedTip } from '../scraper/tiporacle';
 
-export type ExtSource = 'FOREBET' | 'TIPORACLE';
-export const EXT_SOURCES: ExtSource[] = ['FOREBET', 'TIPORACLE'];
+export type ExtSource = 'FOREBET' | 'TIPORACLE' | 'FOOTYACCA';
+export const EXT_SOURCES: ExtSource[] = ['FOREBET', 'TIPORACLE', 'FOOTYACCA'];
 
 export interface ExtTipRecord {
   id: number;

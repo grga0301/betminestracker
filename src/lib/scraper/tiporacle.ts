@@ -4,7 +4,7 @@
 import { parse } from 'node-html-parser';
 
 export interface ExtScrapedTip {
-  source: 'TIPORACLE' | 'FOREBET';
+  source: 'TIPORACLE' | 'FOREBET' | 'FOOTYACCA';
   date: string; // YYYY-MM-DD
   rank: number;
   homeTeam: string;

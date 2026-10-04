@@ -135,6 +135,12 @@ export default function HomePage() {
           blurb="The three headline tips TipOracle publishes each day (mixed markets)."
         />
 
+        <ExtSection
+          source="FOOTYACCA"
+          title="FootyAccumulators · Bet of the Day"
+          blurb="One featured bet per day, published the day before (often a combined market)."
+        />
+
         {/* Facebook IceHockeyBet section — always shown */}
         <FbSection />
 

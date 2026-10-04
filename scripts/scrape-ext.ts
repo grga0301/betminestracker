@@ -1,6 +1,7 @@
 // scripts/scrape-ext.ts — npm run scrape:ext
 import { scrapeForebetToday } from '../src/lib/scraper/forebet';
 import { scrapeTipOracleToday, type ExtScrapedTip } from '../src/lib/scraper/tiporacle';
+import { scrapeFootyAccumulatorsToday } from '../src/lib/scraper/footyaccumulators';
 import { saveExtTips } from '../src/lib/services/extTipService';
 
 async function run(name: string, scrape: () => Promise<ExtScrapedTip[]>): Promise<boolean> {
@@ -23,7 +24,9 @@ async function main() {
   const a = await run('Forebet', scrapeForebetToday);
   console.log('── TipOracle ──');
   const b = await run('TipOracle', scrapeTipOracleToday);
-  if (!a && !b) process.exit(1); // one source failing must not hide the other
+  console.log('── FootyAccumulators ──');
+  const c = await run('FootyAccumulators', scrapeFootyAccumulatorsToday);
+  if (!a && !b && !c) process.exit(1); // one source failing must not hide the other
 }
 
 main();

@@ -1,0 +1,79 @@
+// src/lib/scraper/footyaccumulators.ts
+// footyaccumulators.com publishes one "Bet of the Day" for the next day. The page is a Next.js app
+// whose __NEXT_DATA__ JSON carries the match, market, kickoff (ISO, UTC) and best odds (fractional).
+
+import type { ExtScrapedTip } from './tiporacle';
+
+const URL = 'https://footyaccumulators.com/football-tips/bet-of-the-day';
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+
+interface GridItem {
+  match: { team_a_name: string; team_b_name: string; date_iso: string; competition_name?: string };
+  selection: { headline: string };
+}
+interface TipperTip {
+  meta: { title?: string; grid?: GridItem[]; bestOdds?: string };
+}
+
+function fractionToDecimal(f: string | undefined): number {
+  const m = f?.match(/^(\d+)\/(\d+)$/);
+  if (m) return Math.round((1 + +m[1] / +m[2]) * 100) / 100;
+  const n = parseFloat(f ?? '');
+  return isNaN(n) ? 0 : n;
+}
+
+/** Finds Tipster widgets anywhere in the page JSON and returns the "Bet of the Day" tip. */
+function findBetOfTheDay(node: unknown): TipperTip | null {
+  if (Array.isArray(node)) {
+    for (const v of node) {
+      const r = findBetOfTheDay(v);
+      if (r) return r;
+    }
+  } else if (node && typeof node === 'object') {
+    const o = node as Record<string, any>;
+    if (o.component === 'Tipster' && Array.isArray(o.data?.tips)) {
+      const hit = o.data.tips.find((t: TipperTip) => /bet of the day/i.test(t.meta?.title ?? ''));
+      if (hit) return hit;
+    }
+    for (const v of Object.values(o)) {
+      const r = findBetOfTheDay(v);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+export function parseFootyAccumulators(html: string): ExtScrapedTip[] {
+  const json = html.match(/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/s)?.[1];
+  if (!json) throw new Error('footyaccumulators: __NEXT_DATA__ not found (page layout changed?)');
+  const tip = findBetOfTheDay(JSON.parse(json));
+  const leg = tip?.meta.grid?.[0];
+  if (!tip || !leg) return [];
+
+  const kick = new Date(leg.match.date_iso);
+  const kickoff = kick.toLocaleTimeString('en-GB', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zagreb',
+  });
+
+  return [{
+    source: 'FOOTYACCA',
+    date: leg.match.date_iso.slice(0, 10),
+    rank: 1,
+    homeTeam: leg.match.team_a_name,
+    awayTeam: leg.match.team_b_name,
+    league: leg.match.competition_name ?? '',
+    market: leg.selection.headline,
+    pick: leg.selection.headline,
+    kickoff,
+    odd: fractionToDecimal(tip.meta.bestOdds),
+    confidence: null,
+    sourceUrl: URL,
+  }];
+}
+
+export async function scrapeFootyAccumulatorsToday(): Promise<ExtScrapedTip[]> {
+  const res = await fetch(URL, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' } });
+  if (!res.ok) throw new Error(`footyaccumulators HTTP ${res.status}`);
+  return parseFootyAccumulators(await res.text());
+}
