@@ -109,6 +109,7 @@ model ExtTip {
   odd        Float    @default(0)
   confidence Int?
   sourceUrl  String?
+  legs       String?  // JSON array for multi-match tickets (trebles); null for single tips
   status     String   @default("PENDING")
   homeScore  Int?
   awayScore  Int?

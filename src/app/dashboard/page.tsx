@@ -20,9 +20,8 @@ export default async function DashboardPage() {
   }
 
   const active = sources.filter((s) => s.total > 0);
-  const ranked = [...active]
-    .filter((s) => s.winRate !== null)
-    .sort((a, b) => (b.roi ?? -Infinity) - (a.roi ?? -Infinity));
+  // Every source with data is listed; ones without a resolved tip yet sink to the bottom.
+  const ranked = [...active].sort((a, b) => (b.roi ?? -Infinity) - (a.roi ?? -Infinity));
   const worstStreak = [...active]
     .filter((s) => s.currentStreak.type === 'LOSS')
     .sort((a, b) => b.currentStreak.days - a.currentStreak.days)[0];
@@ -71,7 +70,12 @@ export default async function DashboardPage() {
                 <tbody>
                   {ranked.map((s) => (
                     <tr key={s.key} className="border-b border-white/5 last:border-0">
-                      <td className="px-4 py-2 text-[var(--chalk)]">{s.label}</td>
+                      <td className="px-4 py-2 text-[var(--chalk)]">
+                        {s.label}
+                        {s.winRate === null && (
+                          <span className="ml-2 text-[10px] text-[var(--chalk-dim)]">čeka prvi rezultat</span>
+                        )}
+                      </td>
                       <td className={`px-2 py-2 text-right font-mono-data ${tone(s.winRate, 49.999)}`}>{pct(s.winRate)}</td>
                       <td className="px-2 py-2 text-right font-mono-data text-[var(--chalk-dim)]">{s.wins} / {s.losses}</td>
                       <td className={`px-2 py-2 text-right font-mono-data ${tone(s.profit)}`}>{units(s.profit)}</td>

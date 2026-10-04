@@ -2,10 +2,10 @@
 // DB access for tips from third-party tipster sites (TipOracle, FootyAccumulators, FootballPark).
 
 import { prisma } from '../db/prisma';
-import type { ExtScrapedTip } from '../scraper/tiporacle';
+import type { ExtLeg, ExtScrapedTip } from '../scraper/tiporacle';
 
-export type ExtSource = 'TIPORACLE' | 'FOOTYACCA' | 'FOOTBALLPARK';
-export const EXT_SOURCES: ExtSource[] = ['TIPORACLE', 'FOOTYACCA', 'FOOTBALLPARK'];
+export type ExtSource = 'TIPORACLE' | 'FOOTYACCA' | 'FOOTYACCA_BTTS' | 'FOOTYACCA_OVER25' | 'FOOTBALLPARK';
+export const EXT_SOURCES: ExtSource[] = ['TIPORACLE', 'FOOTYACCA', 'FOOTYACCA_BTTS', 'FOOTYACCA_OVER25', 'FOOTBALLPARK'];
 
 export interface ExtTipRecord {
   id: number;
@@ -20,6 +20,7 @@ export interface ExtTipRecord {
   kickoff: string;
   odd: number;
   confidence: number | null;
+  legs: ExtLeg[] | null;
   status: 'PENDING' | 'WIN' | 'LOSS' | 'VOID';
   homeScore: number | null;
   awayScore: number | null;
@@ -41,7 +42,8 @@ export interface ExtStats {
 
 /** Insert tips that are not stored yet (unique on source+date+rank). Returns how many were new. */
 export async function saveExtTips(tips: ExtScrapedTip[]): Promise<number> {
-  const result = await prisma.extTip.createMany({ data: tips, skipDuplicates: true });
+  const data = tips.map(({ legs, ...t }) => ({ ...t, legs: legs ? JSON.stringify(legs) : null }));
+  const result = await prisma.extTip.createMany({ data, skipDuplicates: true });
   return result.count;
 }
 
@@ -63,6 +65,7 @@ export async function getExtTips(source: ExtSource): Promise<ExtTipRecord[]> {
     kickoff: r.kickoff,
     odd: r.odd,
     confidence: r.confidence,
+    legs: r.legs ? (JSON.parse(r.legs) as ExtLeg[]) : null,
     status: r.status as ExtTipRecord['status'],
     homeScore: r.homeScore,
     awayScore: r.awayScore,
@@ -116,4 +119,9 @@ export async function updateExtTipResult(
   awayScore: number
 ) {
   return prisma.extTip.update({ where: { id }, data: { status, homeScore, awayScore } });
+}
+
+/** Persist per-leg progress of a multi-match ticket; the ticket status follows from its legs. */
+export async function updateExtTipLegs(id: number, status: 'PENDING' | 'WIN' | 'LOSS', legs: ExtLeg[]) {
+  return prisma.extTip.update({ where: { id }, data: { status, legs: JSON.stringify(legs) } });
 }

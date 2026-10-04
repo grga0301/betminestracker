@@ -135,7 +135,9 @@ export async function getDashboard(): Promise<SourceSummary[]> {
     summarize('fst', 'FreeSuperTips', norm(fst, (r) => r.odd)),
     summarize('ft', 'FreeTips.com', norm(ft, (r) => r.odd)),
     summarize('tiporacle', 'TipOracle', extBy('TIPORACLE')),
-    summarize('footyacca', 'FootyAccumulators', extBy('FOOTYACCA')),
+    summarize('footyacca', 'FootyAccumulators · Bet of the Day', extBy('FOOTYACCA')),
+    summarize('footyacca-btts', 'FootyAccumulators · BTTS treble', extBy('FOOTYACCA_BTTS')),
+    summarize('footyacca-o25', 'FootyAccumulators · Over 2.5 treble', extBy('FOOTYACCA_OVER25')),
     summarize('footballpark', 'FootballPark', extBy('FOOTBALLPARK')),
   ];
 }

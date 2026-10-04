@@ -86,9 +86,23 @@ export function ExtSection({ source, title, blurb }: Props) {
               {list.map((t) => (
                 <div key={t.id} className="py-2 flex items-center justify-between gap-3">
                   <div className="min-w-0">
+                    {t.legs ? (
+                      <div className="space-y-0.5">
+                        {t.legs.map((l, i) => (
+                          <p key={i} className="text-sm text-[var(--chalk)] truncate">
+                            <span className={legTone(l.status)}>{legIcon(l.status)}</span>{' '}
+                            {l.homeTeam} <span className="text-[var(--chalk-dim)]">vs</span> {l.awayTeam}
+                            {l.homeScore !== null && l.awayScore !== null && (
+                              <span className="font-mono-data text-xs text-[var(--chalk-dim)]"> {l.homeScore}–{l.awayScore}</span>
+                            )}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
                     <p className="text-sm text-[var(--chalk)] truncate">
                       {t.homeTeam} <span className="text-[var(--chalk-dim)]">vs</span> {t.awayTeam}
                     </p>
+                    )}
                     <p className="text-[11px] text-[var(--chalk-dim)] truncate">
                       {t.market}
                       {t.league && ` · ${t.league}`}
@@ -112,6 +126,9 @@ export function ExtSection({ source, title, blurb }: Props) {
     </section>
   );
 }
+
+const legIcon = (s: string) => (s === 'WIN' ? '✓' : s === 'LOSS' ? '✗' : '•');
+const legTone = (s: string) => (s === 'WIN' ? 'text-green-400' : s === 'LOSS' ? 'text-red-400' : 'text-[var(--chalk-dim)]');
 
 function Stat({ label, value, sub, tone }: { label: string; value: string; sub: string; tone: 'green' | 'red' | 'dim' }) {
   const color = { green: 'text-green-400', red: 'text-red-400', dim: 'text-[var(--chalk)]' }[tone];

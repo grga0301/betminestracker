@@ -3,8 +3,26 @@
 
 import { parse } from 'node-html-parser';
 
+export type ExtSourceKey =
+  | 'TIPORACLE'
+  | 'FOOTYACCA'
+  | 'FOOTYACCA_BTTS'
+  | 'FOOTYACCA_OVER25'
+  | 'FOOTBALLPARK';
+
+/** One match inside a multi-match ticket. */
+export interface ExtLeg {
+  homeTeam: string;
+  awayTeam: string;
+  market: string;
+  kickoffIso: string; // full ISO timestamp (UTC)
+  status: 'PENDING' | 'WIN' | 'LOSS';
+  homeScore: number | null;
+  awayScore: number | null;
+}
+
 export interface ExtScrapedTip {
-  source: 'TIPORACLE' | 'FOOTYACCA' | 'FOOTBALLPARK';
+  source: ExtSourceKey;
   date: string; // YYYY-MM-DD
   rank: number;
   homeTeam: string;
@@ -16,6 +34,7 @@ export interface ExtScrapedTip {
   odd: number;
   confidence: number | null;
   sourceUrl: string | null;
+  legs?: ExtLeg[];
 }
 
 const UA =

@@ -137,6 +137,17 @@ export default function HomePage() {
         />
 
         <ExtSection
+          source="FOOTYACCA_BTTS"
+          title="FootyAccumulators · BTTS Treble"
+          blurb="Three-match BTTS Yes treble, published the day before. Wins only if all three legs win."
+        />
+        <ExtSection
+          source="FOOTYACCA_OVER25"
+          title="FootyAccumulators · Over 2.5 Treble"
+          blurb="Three-match Over 2.5 goals treble, published the day before. Wins only if all three legs win."
+        />
+
+        <ExtSection
           source="FOOTBALLPARK"
           title="FootballPark · Bet of the Day"
           blurb="One single banker pick per day (usually 1X2) with odds."

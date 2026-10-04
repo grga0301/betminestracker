@@ -1,0 +1,1 @@
+ALTER TABLE "ExtTip" ADD COLUMN "legs" TEXT;

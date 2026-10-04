@@ -1,12 +1,14 @@
 // scripts/scrape-ext.ts — npm run scrape:ext
 import { scrapeTipOracleToday, type ExtScrapedTip } from '../src/lib/scraper/tiporacle';
-import { scrapeFootyAccumulatorsToday } from '../src/lib/scraper/footyaccumulators';
+import { FA_CATEGORIES, scrapeFootyAccumulatorsCategory } from '../src/lib/scraper/footyaccumulators';
 import { scrapeFootballParkToday } from '../src/lib/scraper/footballpark';
 import { saveExtTips } from '../src/lib/services/extTipService';
 
 const SOURCES: [string, () => Promise<ExtScrapedTip[]>][] = [
   ['TipOracle', scrapeTipOracleToday],
-  ['FootyAccumulators', scrapeFootyAccumulatorsToday],
+  ...FA_CATEGORIES.map(
+    (c): [string, () => Promise<ExtScrapedTip[]>] => [`FootyAccumulators/${c.path}`, () => scrapeFootyAccumulatorsCategory(c)]
+  ),
   ['FootballPark', scrapeFootballParkToday],
 ];
 
@@ -17,7 +19,7 @@ async function main() {
     try {
       const tips = await scrape();
       for (const t of tips) {
-        console.log(`  ${t.rank}. ${t.homeTeam} vs ${t.awayTeam} | ${t.market} @${t.odd} | ${t.date} ${t.kickoff}`);
+        console.log(`  ${t.rank}. ${t.homeTeam} vs ${t.awayTeam} | ${t.market} @${t.odd} | ${t.date} ${t.kickoff}${t.legs ? ` | ${t.legs.length} legs` : ''}`);
       }
       const added = tips.length > 0 ? await saveExtTips(tips) : 0;
       console.log(`  ✓ ${name}: ${tips.length} found, ${added} new\n`);
