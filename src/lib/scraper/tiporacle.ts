@@ -8,7 +8,8 @@ export type ExtSourceKey =
   | 'FOOTYACCA'
   | 'FOOTYACCA_BTTS'
   | 'FOOTYACCA_OVER25'
-  | 'FOOTBALLPARK';
+  | 'FOOTBALLPARK'
+  | 'ZULUBET';
 
 /** One match inside a multi-match ticket. */
 export interface ExtLeg {

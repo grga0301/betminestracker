@@ -2,6 +2,7 @@
 import { scrapeTipOracleToday, type ExtScrapedTip } from '../src/lib/scraper/tiporacle';
 import { FA_CATEGORIES, scrapeFootyAccumulatorsCategory } from '../src/lib/scraper/footyaccumulators';
 import { scrapeFootballParkToday } from '../src/lib/scraper/footballpark';
+import { scrapeZulubetToday } from '../src/lib/scraper/zulubet';
 import { saveExtTips } from '../src/lib/services/extTipService';
 
 const SOURCES: [string, () => Promise<ExtScrapedTip[]>][] = [
@@ -10,6 +11,7 @@ const SOURCES: [string, () => Promise<ExtScrapedTip[]>][] = [
     (c): [string, () => Promise<ExtScrapedTip[]>] => [`FootyAccumulators/${c.path}`, () => scrapeFootyAccumulatorsCategory(c)]
   ),
   ['FootballPark', scrapeFootballParkToday],
+  ['Zulubet', scrapeZulubetToday],
 ];
 
 async function main() {

@@ -1,6 +1,7 @@
 // scripts/resolve-ext.ts — npm run resolve:ext
 import { getPendingExtTips, updateExtTipResult, updateExtTipLegs } from '../src/lib/services/extTipService';
 import { evaluateExtMarket } from '../src/lib/services/extTipEvaluator';
+import { fetchZulubetScore } from '../src/lib/scraper/zulubet';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { evaluateWithGemini } from '../src/lib/services/geminiEvaluator';
 import type { ExtLeg } from '../src/lib/scraper/tiporacle';
@@ -70,7 +71,9 @@ async function main() {
       continue;
     }
 
-    const score = await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
+    // Zulubet tips are settled from Zulubet's own result pages first (covers small leagues), then the cascade.
+    let score = tip.source === 'ZULUBET' ? await fetchZulubetScore(tip.homeTeam, tip.awayTeam, tip.date) : null;
+    score ??= await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
     if (!score) {
       console.log('  ⏳ no final score yet — keeping PENDING\n');
       continue;

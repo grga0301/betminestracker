@@ -15,6 +15,7 @@
     "resolve:ft": "tsx scripts/resolve-ft.ts",
     "scrape:ext": "tsx scripts/scrape-ext.ts",
     "resolve:ext": "tsx scripts/resolve-ext.ts",
+    "backfill:zulu": "tsx scripts/backfill-zulu.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",

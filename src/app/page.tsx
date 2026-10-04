@@ -148,6 +148,12 @@ export default function HomePage() {
         />
 
         <ExtSection
+          source="ZULUBET"
+          title="Zulubet · Picks @1.7–2.2"
+          blurb="Algorithmic 1X2 predictions: up to three most probable single picks per day priced 1.70–2.20, with full history."
+        />
+
+        <ExtSection
           source="FOOTBALLPARK"
           title="FootballPark · Bet of the Day"
           blurb="One single banker pick per day (usually 1X2) with odds."
