@@ -120,7 +120,10 @@ async function fetchViaWorker(url: string): Promise<string> {
   const token = process.env.FOREBET_PROXY_TOKEN;
   if (!base || !token) throw new Error('FOREBET_PROXY_URL / FOREBET_PROXY_TOKEN not set');
   const res = await fetch(`${base}?url=${encodeURIComponent(url)}`, { headers: { 'x-proxy-token': token } });
-  if (!res.ok) throw new Error(`Worker HTTP ${res.status} for ${url}`);
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 60).replace(/\s+/g, ' ');
+    throw new Error(`Worker HTTP ${res.status} ("${body}", token ${token.length} chars) for ${url}`);
+  }
   const html = await res.text();
   if (html.includes('Just a moment...') || !html.includes('rcnt')) {
     throw new Error(`Worker returned no Forebet rows for ${url} — ${html.length} bytes`);
