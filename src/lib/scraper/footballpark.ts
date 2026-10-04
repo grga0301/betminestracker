@@ -41,14 +41,24 @@ export function parseFootballPark(html: string): ExtScrapedTip[] {
   return tips;
 }
 
-export async function scrapeFootballParkToday(): Promise<ExtScrapedTip[]> {
+// footballpark.com refuses GitHub's datacenter IPs (tiny non-HTML reply). r.jina.ai fetches it from its
+// own network, so retry through it when the direct response has no pick card.
+async function fetchHtml(): Promise<{ html: string; via: string }> {
   const res = await fetch(URL, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' } });
-  if (!res.ok) throw new Error(`footballpark HTTP ${res.status}`);
-  const html = await res.text();
+  const html = res.ok ? await res.text() : '';
+  if (html.includes('botd-card')) return { html, via: 'direct' };
+
+  const proxied = await fetch(`https://r.jina.ai/${URL}`, { headers: { 'X-Return-Format': 'html' } });
+  if (!proxied.ok) throw new Error(`footballpark HTTP ${res.status} direct, ${proxied.status} via proxy`);
+  return { html: await proxied.text(), via: 'r.jina.ai' };
+}
+
+export async function scrapeFootballParkToday(): Promise<ExtScrapedTip[]> {
+  const { html, via } = await fetchHtml();
   const tips = parseFootballPark(html);
   if (tips.length === 0 && !html.includes('botd-card')) {
     const title = html.match(/<title>([^<]*)/)?.[1] ?? '(no title)';
-    throw new Error(`footballpark: no pick card in page (${html.length} bytes, title "${title}")`);
+    throw new Error(`footballpark: no pick card in page via ${via} (${html.length} bytes, title "${title}")`);
   }
   return tips;
 }
