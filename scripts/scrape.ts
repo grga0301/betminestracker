@@ -26,6 +26,14 @@ async function main() {
       process.exit(0);
     }
 
+    // The scraping API costs ~25 credits per call (free plan ≈ 1000/month), and BetMines publishes the
+    // double around midnight UTC — so scheduled runs only call it in that window. Manual runs always go.
+    const hour = new Date().getUTCHours();
+    if (process.env.SCRAPEDO_TOKEN && process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch' && ![1, 2, 3].includes(hour)) {
+      console.log(`⏭ ${hour}:00 UTC is outside the 01–03 UTC publish window — skipping to save API credits.`);
+      process.exit(0);
+    }
+
     console.log('🔍 Scraping BetMines...\n');
     const scraped = await scrapeTodaysDouble();
 
