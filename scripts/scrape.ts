@@ -34,6 +34,15 @@ async function main() {
       process.exit(1);
     }
 
+    // Guard: BetMines publishes the new double in the morning; before that the page still shows yesterday's.
+    const latest = await prisma.betDouble.findFirst({ orderBy: { date: 'desc' }, include: { selections: true } });
+    const pairs = (xs: { homeTeam: string; awayTeam: string }[]) =>
+      xs.map((x) => `${x.homeTeam}|${x.awayTeam}`).sort().join(';');
+    if (latest && pairs(latest.selections) === pairs(scraped.selections)) {
+      console.log(`ℹ Page still shows the previous double (${latest.date}). Not saving; will retry next run.`);
+      process.exit(0);
+    }
+
     // Save to DB
     const created = await prisma.betDouble.create({
       data: {

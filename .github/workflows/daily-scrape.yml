@@ -27,3 +27,4 @@ jobs:
         run: npm run scrape
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SCRAPEDO_TOKEN: ${{ secrets.SCRAPEDO_TOKEN }}

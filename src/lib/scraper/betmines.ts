@@ -84,6 +84,31 @@ function resolveMarket(marketLabel: string, pick: string): { market: string; lin
 }
 
 /**
+ * Fetches the rendered daily page through Scrape.do (residential proxy + JS rendering, ~25 credits/call).
+ * Throws if the response is still a Cloudflare page, so nothing wrong is ever saved.
+ */
+async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
+  const params = new URLSearchParams({
+    token,
+    url: BETMINES_URL,
+    render: 'true',
+    super: 'true',
+    waitSelector: '.daily-bet-fixture-content',
+    customWait: '2000',
+    timeout: '60000',
+  });
+  console.log('[Scraper] Fetching BetMines via Scrape.do …');
+  const res = await fetch(`https://api.scrape.do/?${params}`, { signal: AbortSignal.timeout(90_000) });
+  const html = await res.text();
+  if (!res.ok) throw new Error(`Scrape.do HTTP ${res.status}: ${html.slice(0, 200).replace(/\s+/g, ' ')}`);
+  if (/Just a moment|unable to access betmines/i.test(html) || !html.includes('daily-bet-fixture')) {
+    const title = html.match(/<title>([^<]*)/)?.[1] ?? '(no title)';
+    throw new Error(`Scrape.do returned no fixtures (${html.length} bytes, title "${title}")`);
+  }
+  return html;
+}
+
+/**
  * Main scraper — extracts the "Double" section from betmines.com/daily-bets-football.
  */
 export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
@@ -103,9 +128,18 @@ export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
     });
 
-    console.log(`[Scraper] Navigating to ${BETMINES_URL}`);
-    await page.goto(BETMINES_URL, { waitUntil: 'networkidle', timeout: 60_000 });
-    await page.waitForTimeout(4000);
+    if (process.env.SCRAPEDO_TOKEN) {
+      // betmines.com sits behind a Cloudflare managed challenge that automated browsers cannot pass
+      // (since 2026-10-04). A scraping API solves it and returns the rendered DOM; we load that HTML
+      // into a network-less page so the extraction code below stays unchanged.
+      const html = await fetchBetMinesViaScrapeDo(process.env.SCRAPEDO_TOKEN);
+      await page.route('**/*', (route) => route.abort());
+      await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    } else {
+      console.log(`[Scraper] Navigating to ${BETMINES_URL}`);
+      await page.goto(BETMINES_URL, { waitUntil: 'networkidle', timeout: 60_000 });
+      await page.waitForTimeout(4000);
+    }
 
     const h2Texts = await page.evaluate(() =>
       Array.from(document.querySelectorAll('h2, h3')).map((h) => h.textContent?.trim()).filter(Boolean)
