@@ -4,7 +4,7 @@ import { getPendingFstTips, updateFstTipResult, getAllFstTips } from '../src/lib
 import { sendTelegramMessage } from '../src/lib/services/telegramService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
-import { evaluateWithFallback } from '../src/lib/services/geminiEvaluator';
+import { evaluateStrict } from '../src/lib/services/geminiEvaluator';
 
 function normalizeTeam(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -94,7 +94,7 @@ async function main() {
       continue;
     }
 
-    const status = await evaluateWithFallback(
+    const status = await evaluateStrict(
       tip.market,
       tip.homeTeam,
       tip.awayTeam,
@@ -103,6 +103,12 @@ async function main() {
       null,
       tip.pick,
     );
+
+    if (!status) {
+      console.log(`  ⏳ Could not settle "${tip.market}" / "${tip.pick}" — keeping PENDING
+`);
+      continue;
+    }
 
     await updateFstTipResult(tip.id, score.homeScore, score.awayScore, status);
 

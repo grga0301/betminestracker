@@ -17,6 +17,17 @@ function evaluateLeg(leg: string, home: number, away: number): Result | null {
   const ou = m.match(/^(over|under)\s*(\d+(?:\.\d+)?)(?:\s*goals?)?$/);
   if (ou) return w(ou[1] === 'over' ? total > +ou[2] : total < +ou[2]);
 
+  // "<team> to win to nil" (written as "home to win to nil" after team-name substitution)
+  const nil = m.match(/^(home|away) (?:to )?win to nil$/);
+  if (nil) return w(nil[1] === 'home' ? home > away && away === 0 : away > home && home === 0);
+
+  // Whole/half-goal handicap on a team ("France -1"). A push (equal after handicap) can't be WIN/LOSS → null.
+  const hc = m.match(/^(home|away) ([+-]\d+(?:\.[05])?)$/);
+  if (hc) {
+    const adj = (hc[1] === 'home' ? home - away : away - home) + +hc[2];
+    return adj === 0 ? null : w(adj > 0);
+  }
+
   if (m === 'home win' || m === 'home' || m === '1') return w(home > away);
   if (m === 'away win' || m === 'away' || m === '2') return w(away > home);
   if (m === 'draw' || m === 'x') return w(home === away);

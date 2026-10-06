@@ -2,6 +2,7 @@
 // Handles complex combined markets like "Away Win & BTTS", "Home Win & Over 2.5", etc.
 
 import { evaluateSelection } from './resultEvaluator';
+import { evaluateExtMarket } from './extTipEvaluator';
 
 // Pinned model ids get retired (gemini-2.0-flash now returns 404), so default to the rolling alias.
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-flash-latest';
@@ -13,7 +14,7 @@ export async function evaluateWithGemini(
   awayTeam: string,
   homeScore: number,
   awayScore: number
-): Promise<'WIN' | 'LOSS' | 'VOID'> {
+): Promise<'WIN' | 'LOSS' | 'VOID' | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
@@ -35,11 +36,14 @@ export async function evaluateWithGemini(
         generationConfig: { temperature: 0, maxOutputTokens: 256 },
       }),
     }
-  );
+  ).catch((e) => {
+    console.log(`  [Gemini] network error: ${e?.cause?.code ?? e}`);
+    return null;
+  });
 
-  if (!res.ok) {
-    console.log(`  [Gemini] API error: ${res.status}`);
-    return 'VOID';
+  if (!res || !res.ok) {
+    if (res) console.log(`  [Gemini] API error: ${res.status}`);
+    return null; // API failure ≠ a void bet — let the caller keep the tip pending
   }
 
   const json = await res.json();
@@ -47,7 +51,8 @@ export async function evaluateWithGemini(
 
   if (answer.startsWith('WIN')) return 'WIN';
   if (answer.startsWith('LOSS')) return 'LOSS';
-  return 'VOID';
+  if (answer.startsWith('VOID')) return 'VOID';
+  return null; // unclear answer — don't guess
 }
 
 // Uses Gemini with Google Search grounding to find a match result when all other sources fail.
@@ -114,5 +119,34 @@ export async function evaluateWithFallback(
   if (!process.env.GEMINI_API_KEY) return 'VOID';
 
   console.log(`  🤖 Unknown market "${market}" — falling back to Gemini...`);
-  return evaluateWithGemini(market, pick ?? market, homeTeam, awayTeam, homeScore, awayScore);
+  return (await evaluateWithGemini(market, pick ?? market, homeTeam, awayTeam, homeScore, awayScore)) ?? 'VOID';
+}
+
+/**
+ * Like evaluateWithFallback, but returns null when the bet cannot be settled with confidence
+ * (unknown market, push, Gemini unavailable) so the caller keeps it PENDING instead of storing VOID.
+ * Tries, in order: the legacy rules, the wider pick/market vocabulary (handicaps, "to win to nil" …), Gemini.
+ */
+export async function evaluateStrict(
+  market: string,
+  homeTeam: string,
+  awayTeam: string,
+  homeScore: number,
+  awayScore: number,
+  line: number | null = null,
+  pick?: string,
+): Promise<'WIN' | 'LOSS' | null> {
+  const local = evaluateSelection({ market, line, homeScore, awayScore });
+  if (local === 'WIN' || local === 'LOSS') return local;
+
+  for (const text of [pick, market]) {
+    if (!text) continue;
+    const ext = evaluateExtMarket(text, homeScore, awayScore, homeTeam, awayTeam);
+    if (ext) return ext;
+  }
+
+  if (!process.env.GEMINI_API_KEY) return null;
+  console.log(`  🤖 Unknown market "${market}" / pick "${pick ?? ''}" — asking Gemini...`);
+  const g = await evaluateWithGemini(market, pick ?? market, homeTeam, awayTeam, homeScore, awayScore);
+  return g === 'WIN' || g === 'LOSS' ? g : null;
 }

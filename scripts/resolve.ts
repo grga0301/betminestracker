@@ -5,7 +5,7 @@
 import { PrismaClient } from '@prisma/client';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
 import { evaluateDouble } from '../src/lib/services/resultEvaluator';
-import { evaluateWithFallback } from '../src/lib/services/geminiEvaluator';
+import { evaluateStrict } from '../src/lib/services/geminiEvaluator';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { sendTelegramMessage } from '../src/lib/services/telegramService';
 
@@ -122,7 +122,7 @@ async function main() {
           continue;
         }
 
-        const resultStatus = await evaluateWithFallback(
+        const resultStatus = await evaluateStrict(
           sel.market,
           sel.homeTeam,
           sel.awayTeam,
@@ -130,6 +130,11 @@ async function main() {
           score.awayScore,
           sel.line,
         );
+
+        if (!resultStatus) {
+          console.log(`  ⏳ Could not settle "${sel.market}" — keeping PENDING`);
+          continue;
+        }
 
         await prisma.betSelection.update({
           where: { id: sel.id },

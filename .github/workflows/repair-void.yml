@@ -1,10 +1,10 @@
-name: Cleanup Demo Doubles (one-off)
+name: Repair Wrong VOID Results (one-off)
 
 on:
   workflow_dispatch:
 
 jobs:
-  cleanup:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,6 +14,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npx prisma generate
-      - run: npx tsx scripts/delete-demo-doubles.ts
+      - run: npx tsx scripts/repair-void.ts
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
