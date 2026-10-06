@@ -262,6 +262,12 @@ export async function fetchScoreFromSportsDB(
   if (sportsDb) { console.log(`  [Fetch] TheSportsDB: ${sportsDb.homeScore}-${sportsDb.awayScore}`); return sportsDb; }
   console.log(`  [Fetch] TheSportsDB: no result`);
 
+  console.log(`  [Fetch] Zulubet...`);
+  const { findZulubetScore } = await import('../scraper/zulubet');
+  const zulu = await findZulubetScore(homeTeam, awayTeam, date).catch(() => null);
+  if (zulu) { console.log(`  [Fetch] Zulubet: ${zulu.homeScore}-${zulu.awayScore}`); return zulu; }
+  console.log(`  [Fetch] Zulubet: no result`);
+
   console.log(`  [Fetch] ESPN (${ESPN_LEAGUES.length} leagues parallel)...`);
   const espn = await fetchFromESPN(homeTeam, awayTeam, date);
   if (espn) { console.log(`  [Fetch] ESPN: ${espn.homeScore}-${espn.awayScore}`); return espn; }

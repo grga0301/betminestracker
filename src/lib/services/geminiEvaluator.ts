@@ -3,6 +3,9 @@
 
 import { evaluateSelection } from './resultEvaluator';
 
+// Pinned model ids get retired (gemini-2.0-flash now returns 404), so default to the rolling alias.
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-flash-latest';
+
 export async function evaluateWithGemini(
   market: string,
   pick: string,
@@ -23,13 +26,13 @@ export async function evaluateWithGemini(
     `Reply with exactly one word: WIN, LOSS, or VOID (only if the market is genuinely void/cancelled).`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 10 },
+        generationConfig: { temperature: 0, maxOutputTokens: 256 },
       }),
     }
   );
@@ -63,14 +66,14 @@ export async function fetchScoreWithGemini(
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ googleSearch: {} }],
-          generationConfig: { temperature: 0, maxOutputTokens: 20 },
+          generationConfig: { temperature: 0, maxOutputTokens: 256 },
         }),
       }
     );

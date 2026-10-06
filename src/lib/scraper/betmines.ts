@@ -199,14 +199,20 @@ export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
       return { selections, totalOdds };
     });
 
+    // Never fabricate data: a missing double must fail loudly instead of saving a fake one.
+    // (Since 2026-10-04 BetMines serves a Cloudflare block page — "You are unable to access betmines.com".)
+    if (h2Texts.some((t) => /unable to access|blocked/i.test(t ?? ''))) {
+      console.error('[Scraper] BetMines blocked this request (Cloudflare). No double saved.');
+      return null;
+    }
     if (!raw || raw.selections.length === 0) {
-      console.warn('[Scraper] Double section not found on page. Using demo data.');
-      return getDemoDouble();
+      console.error('[Scraper] Double section not found on page (layout changed?). No double saved.');
+      return null;
     }
 
     if (raw.selections.length < 2) {
-      console.warn(`[Scraper] Only ${raw.selections.length} selection(s) found. Expected 2. Using demo data.`);
-      return getDemoDouble();
+      console.error(`[Scraper] Only ${raw.selections.length} selection(s) found. Expected 2. No double saved.`);
+      return null;
     }
 
     const today = getTodayString();
@@ -240,37 +246,6 @@ export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
   } finally {
     if (browser) await browser.close();
   }
-}
-
-function getDemoDouble(): ScrapedDouble {
-  const today = getTodayString();
-  console.log('[Scraper] Using demo double for date:', today);
-  return {
-    date: today,
-    totalOdds: 2.0,
-    selections: [
-      {
-        homeTeam: 'SC Freiburg',
-        awayTeam: 'Sporting Braga',
-        market: 'Over 1.5',
-        line: 1.5,
-        odd: 1.33,
-        league: 'UEFA Europa League',
-        country: 'Europe',
-        kickoff: new Date().toISOString(),
-      },
-      {
-        homeTeam: 'Sleipner',
-        awayTeam: 'Syrianska',
-        market: 'Over 2.5',
-        line: 2.5,
-        odd: 1.50,
-        league: 'Superettan',
-        country: 'Sweden',
-        kickoff: new Date().toISOString(),
-      },
-    ],
-  };
 }
 
 /**

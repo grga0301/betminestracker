@@ -141,3 +141,43 @@ export const outcome = (s: { homeScore: number; awayScore: number }) =>
 
 export const pickIndex = idx;
 export { toTip as zuluRowToTip };
+
+const plain = (n: string) =>
+  n
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\brep\.?\s+of\b/g, 'republic of')
+    .replace(/[^a-z0-9]/g, '');
+
+/** Team names differ between sites ("Rep of Ireland" / "Republic of Ireland"), so compare loosely. */
+export function sameTeam(a: string, b: string): boolean {
+  const x = plain(a), y = plain(b);
+  if (!x || !y) return false;
+  return x === y || (Math.min(x.length, y.length) >= 5 && (x.includes(y) || y.includes(x)));
+}
+
+/**
+ * Final score of any match from Zulubet's daily lists (≈100 matches/day incl. internationals and lower
+ * leagues), used as a cheap fallback for every source. Looks at the tip date and the day after.
+ */
+export async function findZulubetScore(
+  homeTeam: string,
+  awayTeam: string,
+  date: string
+): Promise<{ homeScore: number; awayScore: number } | null> {
+  const day = (offset: number) => new Date(Date.parse(date) + offset * 864e5).toISOString().slice(0, 10);
+  for (const d of [date, day(1), day(-1)]) {
+    const rows = await fetchZulubetDay(d).catch(() => []);
+    for (const r of rows) {
+      if (!r.score) continue;
+      const kickDay = r.kickoffIso.slice(0, 10);
+      if (kickDay < day(-1) || kickDay > day(1)) continue;
+      if (sameTeam(r.homeTeam, homeTeam) && sameTeam(r.awayTeam, awayTeam)) return r.score;
+      if (sameTeam(r.homeTeam, awayTeam) && sameTeam(r.awayTeam, homeTeam)) {
+        return { homeScore: r.score.awayScore, awayScore: r.score.homeScore };
+      }
+    }
+  }
+  return null;
+}
