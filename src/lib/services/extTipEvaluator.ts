@@ -41,12 +41,32 @@ function evaluateLeg(leg: string, home: number, away: number): Result | null {
   return null;
 }
 
+const loose = (n: string) =>
+  n
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\brep\.?(\s+of)?\b/g, 'republic of')
+    .replace(/[^a-z0-9]/g, '');
+
 /** Replace a leading team name by "home"/"away" so "Sweden Win" reads like "Away Win". */
 function withSides(leg: string, homeTeam?: string, awayTeam?: string): string {
   const l = leg.trim();
   const starts = (team?: string) => !!team && l.toLowerCase().startsWith(team.toLowerCase() + ' ');
   if (starts(homeTeam)) return 'home' + l.slice(homeTeam!.length);
   if (starts(awayTeam)) return 'away' + l.slice(awayTeam!.length);
+
+  // Names written differently ("Rep. Ireland" vs "Republic of Ireland"): split "<name> <market…>" and compare loosely.
+  const m = l.match(/^(.+?)\s+((?:to )?win\b.*|[+-]\d.*)$/i);
+  if (m) {
+    const name = loose(m[1]);
+    const same = (team?: string) => {
+      const t = team ? loose(team) : '';
+      return !!t && (name === t || (Math.min(name.length, t.length) >= 5 && (name.includes(t) || t.includes(name))));
+    };
+    if (same(homeTeam)) return 'home ' + m[2];
+    if (same(awayTeam)) return 'away ' + m[2];
+  }
   return l;
 }
 
