@@ -12,7 +12,7 @@ const MATCH_DURATION_MS = 2.5 * 3600 * 1000; // don't query results before a mat
 // Team names differ per site ("Atlético de Madrid" vs "Atletico Madrid"): drop accents and filler words.
 const teamKey = (n: string) =>
   n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    .replace(/(de|fc|cf|club|afc|sc)/g, '').replace(/[^a-z0-9]/g, '');
+    .replace(/\b(de|fc|cf|club|afc|sc)\b/g, '').replace(/[^a-z0-9]/g, '');
 const sameTeam = (a: string, b: string) => {
   const x = teamKey(a), y = teamKey(b);
   return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 5 && (x.includes(y) || y.includes(x))));
