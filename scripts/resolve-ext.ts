@@ -1,5 +1,5 @@
 // scripts/resolve-ext.ts — npm run resolve:ext
-import { getPendingExtTips, updateExtTipResult, updateExtTipLegs } from '../src/lib/services/extTipService';
+import { getPendingExtTips, getScoredExtTips, updateExtTipResult, updateExtTipLegs } from '../src/lib/services/extTipService';
 import { evaluateExtMarket } from '../src/lib/services/extTipEvaluator';
 import { fetchZulubetScore } from '../src/lib/scraper/zulubet';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
@@ -8,6 +8,15 @@ import type { ExtLeg } from '../src/lib/scraper/tiporacle';
 
 const GIVE_UP_AFTER_DAYS = 7;
 const MATCH_DURATION_MS = 2.5 * 3600 * 1000; // don't query results before a match can have finished
+
+// Team names differ per site ("Atlético de Madrid" vs "Atletico Madrid"): drop accents and filler words.
+const teamKey = (n: string) =>
+  n.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/(de|fc|cf|club|afc|sc)/g, '').replace(/[^a-z0-9]/g, '');
+const sameTeam = (a: string, b: string) => {
+  const x = teamKey(a), y = teamKey(b);
+  return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 5 && (x.includes(y) || y.includes(x))));
+};
 
 type Settled = 'WIN' | 'LOSS';
 
@@ -53,6 +62,8 @@ async function main() {
   console.log(`Found ${pending.length} pending external tip(s)\n`);
   const cutoff = new Date(Date.now() - GIVE_UP_AFTER_DAYS * 864e5).toISOString().slice(0, 10);
 
+  const scored = await getScoredExtTips(cutoff);
+
   for (const tip of pending) {
     if (tip.date < cutoff) continue;
     console.log(`─── ${tip.source} ${tip.date}: ${tip.homeTeam} vs ${tip.awayTeam} | ${tip.market}`);
@@ -73,6 +84,12 @@ async function main() {
 
     // Zulubet tips are settled from Zulubet's own result pages first (covers small leagues), then the cascade.
     let score = tip.source === 'ZULUBET' ? await fetchZulubetScore(tip.homeTeam, tip.awayTeam, tip.date) : null;
+    // Same match already settled under another source (names spelled differently there)?
+    const known = scored.find((t) => t.date === tip.date && sameTeam(t.homeTeam, tip.homeTeam) && sameTeam(t.awayTeam, tip.awayTeam));
+    if (!score && known) {
+      console.log('  [Fetch] reused score from another source');
+      score = { homeScore: known.homeScore!, awayScore: known.awayScore! };
+    }
     score ??= await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
     if (!score) {
       console.log('  ⏳ no final score yet — keeping PENDING\n');

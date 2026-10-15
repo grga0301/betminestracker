@@ -2,7 +2,8 @@ name: Daily Resolve FreeTips
 
 on:
   schedule:
-    - cron: '15 * * * *'  # Every hour at :15
+    - cron: '50 6 * * *'  # morning (UTC)
+    - cron: '5 22 * * *'  # evening (UTC) = 23:45 / 00:05 Zagreb in summer time
   workflow_dispatch:
 
 jobs:

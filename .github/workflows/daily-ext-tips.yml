@@ -2,7 +2,8 @@ name: Scrape & Resolve External Tips
 
 on:
   schedule:
-    - cron: '20 * * * *'  # Every hour at :20
+    - cron: '30 6 * * *'  # morning (UTC)
+    - cron: '45 21 * * *'  # evening (UTC) = 23:45 / 00:05 Zagreb in summer time
   workflow_dispatch:
 
 jobs:

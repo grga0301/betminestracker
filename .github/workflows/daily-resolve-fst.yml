@@ -2,7 +2,8 @@ name: Daily Resolve FST
 
 on:
   schedule:
-    - cron: '45 * * * *'  # Every hour at :45
+    - cron: '50 6 * * *'  # morning (UTC)
+    - cron: '5 22 * * *'  # evening (UTC) = 23:45 / 00:05 Zagreb in summer time
   workflow_dispatch:
 
 jobs:

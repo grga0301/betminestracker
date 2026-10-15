@@ -116,7 +116,10 @@ export async function scrapeFtBetOfTheDay(): Promise<FtScrapedTip> {
   const timeMatch = betaccText.match(/(\d{1,2}:\d{2})/);
   const kickoff = timeMatch ? timeMatch[1] : '';
 
-  const date = new Date().toISOString().split('T')[0];
+  // Use the match's own date (data-bettime="2026/10/15 05:45:00 PM"), not "today": when the site hasn't yet
+  // swapped in the new pick, today's date would store yesterday's match again as a duplicate that never resolves.
+  const bet = root.querySelector('.betacctime .tm')?.getAttribute('data-bettime')?.match(/^(\d{4})\/(\d{2})\/(\d{2})/);
+  const date = bet ? `${bet[1]}-${bet[2]}-${bet[3]}` : new Date().toISOString().split('T')[0];
 
   return { date, homeTeam, awayTeam, pick, market, kickoff, odd };
 }

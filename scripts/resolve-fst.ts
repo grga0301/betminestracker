@@ -65,6 +65,8 @@ async function main() {
     // 1. Try TheSportsDB
     console.log('  🔍 Trying TheSportsDB...');
     score = await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
+    // FST publishes the pick the day before, so the stored date can be a day earlier than the match.
+    score ??= await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, new Date(Date.parse(tip.date) + 864e5).toISOString().slice(0, 10));
     if (score) {
       console.log(`  ✓ TheSportsDB: ${score.homeScore}-${score.awayScore}`);
     } else {

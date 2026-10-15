@@ -14,6 +14,13 @@ export async function saveFstTip(tip: {
   const existing = await prisma.fstTip.findUnique({ where: { date: tip.date } });
   if (existing) return { saved: false, alreadyExists: true };
 
+  // The site may still show the previous pick under a new date — same match within 2 days is a repeat, not a new tip.
+  const since = new Date(Date.parse(tip.date) - 2 * 864e5).toISOString().slice(0, 10);
+  const repeat = await prisma.fstTip.findFirst({
+    where: { homeTeam: tip.homeTeam, awayTeam: tip.awayTeam, date: { gte: since } },
+  });
+  if (repeat) return { saved: false, alreadyExists: true };
+
   await prisma.fstTip.create({ data: tip });
   return { saved: true, alreadyExists: false };
 }

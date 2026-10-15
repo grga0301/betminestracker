@@ -105,6 +105,14 @@ export function computeExtStats(tips: Pick<ExtTipRecord, 'status' | 'odd'>[]): E
   };
 }
 
+/** Tips (any source, incl. legs-free ones) that already carry a final score — lets other sources reuse it. */
+export async function getScoredExtTips(sinceDate: string) {
+  return prisma.extTip.findMany({
+    where: { date: { gte: sinceDate }, homeScore: { not: null }, awayScore: { not: null } },
+    select: { date: true, homeTeam: true, awayTeam: true, homeScore: true, awayScore: true },
+  });
+}
+
 export async function getPendingExtTips() {
   return prisma.extTip.findMany({
     where: { status: 'PENDING' },

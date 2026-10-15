@@ -5,7 +5,13 @@ import { evaluateSelection } from './resultEvaluator';
 import { evaluateExtMarket } from './extTipEvaluator';
 
 // Pinned model ids get retired (gemini-2.0-flash now returns 404), so default to the rolling alias.
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-flash-latest';
+// Flash-Lite has the most generous free tier; accuracy is enough for "final score of X vs Y".
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-flash-lite-latest';
+
+// Free-tier quota guard: at most N grounded searches per process, and stop for good after the first 429.
+const MAX_SEARCHES_PER_RUN = Number(process.env.GEMINI_MAX_SEARCHES ?? 5);
+let searches = 0;
+let quotaHit = false;
 
 export async function evaluateWithGemini(
   market: string,
@@ -62,7 +68,8 @@ export async function fetchScoreWithGemini(
   date: string,
 ): Promise<{ homeScore: number; awayScore: number } | null> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey || quotaHit || searches >= MAX_SEARCHES_PER_RUN) return null;
+  searches++;
 
   const prompt =
     `What was the final score of the football match between ${homeTeam} (home) and ${awayTeam} (away) played on ${date}?\n` +
@@ -85,6 +92,7 @@ export async function fetchScoreWithGemini(
 
     if (!res.ok) {
       console.log(`  [Gemini] HTTP error: ${res.status}`);
+      if (res.status === 429) quotaHit = true;
       return null;
     }
     const json = await res.json();
