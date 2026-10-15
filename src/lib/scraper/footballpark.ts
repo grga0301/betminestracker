@@ -42,23 +42,51 @@ export function parseFootballPark(html: string): ExtScrapedTip[] {
 }
 
 // footballpark.com refuses GitHub's datacenter IPs (tiny non-HTML reply). r.jina.ai fetches it from its
-// own network, so retry through it when the direct response has no pick card.
-async function fetchHtml(): Promise<{ html: string; via: string }> {
-  const res = await fetch(URL, { headers: { 'User-Agent': UA, 'Accept-Language': 'en' } });
-  const html = res.ok ? await res.text() : '';
-  if (html.includes('botd-card')) return { html, via: 'direct' };
+// own network, but it intermittently answers with a ~205 byte error instead of the page. Since the workflow
+// only gets a few runs per day, one bad run can lose the whole day's tip — so try several routes, with retries.
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const proxied = await fetch(`https://r.jina.ai/${URL}`, { headers: { 'X-Return-Format': 'html' } });
-  if (!proxied.ok) throw new Error(`footballpark HTTP ${res.status} direct, ${proxied.status} via proxy`);
-  return { html: await proxied.text(), via: 'r.jina.ai' };
+type Route = { name: string; url: string; headers: Record<string, string> };
+
+function routes(): Route[] {
+  const jinaKey = process.env.JINA_API_KEY;
+  return [
+    { name: 'direct', url: URL, headers: { 'User-Agent': UA, 'Accept-Language': 'en' } },
+    {
+      name: 'r.jina.ai',
+      url: `https://r.jina.ai/${URL}`,
+      headers: { 'X-Return-Format': 'html', ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}) },
+    },
+    {
+      name: 'r.jina.ai(no-cache)',
+      url: `https://r.jina.ai/${URL}`,
+      headers: { 'X-Return-Format': 'html', 'X-No-Cache': 'true', ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}) },
+    },
+    { name: 'allorigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(URL)}`, headers: { 'User-Agent': UA } },
+    { name: 'corsproxy', url: `https://corsproxy.io/?${encodeURIComponent(URL)}`, headers: { 'User-Agent': UA } },
+  ];
+}
+
+async function fetchHtml(): Promise<{ html: string; via: string }> {
+  const failures: string[] = [];
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    for (const r of routes()) {
+      try {
+        const res = await fetch(r.url, { headers: r.headers, signal: AbortSignal.timeout(30_000) });
+        const body = await res.text();
+        if (res.ok && body.includes('botd-card')) return { html: body, via: `${r.name}#${attempt}` };
+        failures.push(`${r.name}#${attempt}: HTTP ${res.status}, ${body.length}B "${body.replace(/\s+/g, ' ').slice(0, 120)}"`);
+      } catch (e) {
+        failures.push(`${r.name}#${attempt}: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    if (attempt < 3) await sleep(attempt * 5_000);
+  }
+  throw new Error(`footballpark: no pick card from any route —\n    ${failures.join('\n    ')}`);
 }
 
 export async function scrapeFootballParkToday(): Promise<ExtScrapedTip[]> {
   const { html, via } = await fetchHtml();
-  const tips = parseFootballPark(html);
-  if (tips.length === 0 && !html.includes('botd-card')) {
-    const title = html.match(/<title>([^<]*)/)?.[1] ?? '(no title)';
-    throw new Error(`footballpark: no pick card in page via ${via} (${html.length} bytes, title "${title}")`);
-  }
-  return tips;
+  console.log(`  (footballpark fetched via ${via})`);
+  return parseFootballPark(html);
 }

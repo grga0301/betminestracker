@@ -24,6 +24,7 @@ jobs:
         run: npm run scrape:ext
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
 
       - name: Resolve pending external tips
         run: npm run resolve:ext
