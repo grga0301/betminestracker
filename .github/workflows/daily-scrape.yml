@@ -2,8 +2,8 @@ name: Daily Scrape
 
 on:
   schedule:
-    - cron: '30 6 * * *'  # morning (UTC)
-    - cron: '45 21 * * *'  # evening (UTC) = 23:45 / 00:05 Zagreb in summer time
+    - cron: '17 1 * * *'  # inside BetMines publish window (GitHub delays crons by hours)
+    - cron: '47 2 * * *'
   workflow_dispatch:
 
 jobs:

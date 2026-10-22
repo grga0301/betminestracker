@@ -86,10 +86,11 @@ async function fetchFromSportsDB(homeTeam: string, awayTeam: string, date: strin
 // ── ESPN ─────────────────────────────────────────────────────────────────────
 
 const ESPN_LEAGUES = [
+  'all',
   'eng.1', 'esp.1', 'ger.1', 'ita.1', 'fra.1',
   'ned.1', 'por.1', 'tur.1', 'bel.1', 'sco.1',
-  'usa.1', 'gre.1', 'aut.1', 'hrv.1',
-  'UEFA.CHAMPIONS_LEAGUE', 'UEFA.EUROPA', 'UEFA.EUROPA_CONFERENCE_LEAGUE',
+  'usa.1', 'gre.1', 'aut.1',
+  'uefa.champions', 'uefa.europa', 'uefa.europa.conf',
 ];
 
 async function fetchFromESPN(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
@@ -97,7 +98,7 @@ async function fetchFromESPN(homeTeam: string, awayTeam: string, date: string): 
   const results = await Promise.allSettled(
     ESPN_LEAGUES.map((league) =>
       fetchJson(
-        `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${d}`,
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${d}&limit=500`,
         7_000
       )
     )
