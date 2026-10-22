@@ -98,9 +98,17 @@ async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
     timeout: '60000',
   });
   console.log('[Scraper] Fetching BetMines via Scrape.do …');
-  const res = await fetch(`https://api.scrape.do/?${params}`, { signal: AbortSignal.timeout(90_000) });
-  const html = await res.text();
-  if (!res.ok) throw new Error(`Scrape.do HTTP ${res.status}: ${html.slice(0, 200).replace(/\s+/g, ' ')}`);
+  // Scrape.do occasionally fails on protected sites (ROTATION_FAILED, 502) — retry a few times.
+  let html = '';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const res = await fetch(`https://api.scrape.do/?${params}`, { signal: AbortSignal.timeout(90_000) });
+    html = await res.text();
+    if (res.ok) break;
+    const msg = `Scrape.do HTTP ${res.status}: ${html.slice(0, 200).replace(/\s+/g, ' ')}`;
+    if (attempt === 3 || res.status < 500) throw new Error(msg);
+    console.log(`[Scraper] ${msg} — retry ${attempt}/2`);
+    await new Promise((r) => setTimeout(r, 5000));
+  }
   if (/Just a moment|unable to access betmines/i.test(html) || !html.includes('daily-bet-fixture')) {
     const title = html.match(/<title>([^<]*)/)?.[1] ?? '(no title)';
     throw new Error(`Scrape.do returned no fixtures (${html.length} bytes, title "${title}")`);
