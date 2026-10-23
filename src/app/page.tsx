@@ -13,6 +13,9 @@ import { StreakAlert } from '@/components/StreakAlert';
 import { SourceHealth } from '@/components/SourceHealth';
 import type { DoubleRecord, Stats } from '@/lib/types';
 
+/** How many BetMines doubles are shown before "View more". */
+const DOUBLES_PREVIEW = 10;
+
 const DEFAULT_STATS: Stats = {
   total: 0,
   wins: 0,
@@ -29,6 +32,7 @@ export default function HomePage() {
   const [stats, setStats] = useState<Stats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -115,10 +119,19 @@ export default function HomePage() {
 
             {/* Cards grid */}
             <div className="space-y-4">
-              {doubles.map((d, i) => (
+              {(showAll ? doubles : doubles.slice(0, DOUBLES_PREVIEW)).map((d, i) => (
                 <DoubleCard key={d.id} double={d} index={i} />
               ))}
             </div>
+
+            {doubles.length > DOUBLES_PREVIEW && (
+              <button
+                onClick={() => setShowAll((v) => !v)}
+                className="mt-4 w-full rounded-lg border border-[var(--border)] py-2 text-xs uppercase tracking-wider text-[var(--chalk-dim)] hover:text-[var(--chalk)] transition-colors"
+              >
+                {showAll ? 'Show less' : `View more (${doubles.length - DOUBLES_PREVIEW})`}
+              </button>
+            )}
 
             {/* Footer */}
             <div className="mt-4 pb-8 text-center">
