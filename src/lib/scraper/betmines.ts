@@ -123,7 +123,7 @@ async function fetchViaJina(): Promise<string> {
 }
 
 /**
- * Fetches the rendered daily page. Tries a chain of strategies (several Scrape.do option sets, then Jina)
+ * Fetches the rendered daily page. Tries a chain of strategies (several Scrape.do option sets, then Jina; the cheaper no-super call goes first because it worked when super+render hit ROTATION_FAILED)
  * and returns the first HTML that really contains the fixtures, so nothing wrong is ever saved.
  * Each Scrape.do call costs credits (~25 with super+render), so the chain is capped.
  */
@@ -131,10 +131,10 @@ async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
   await logScrapeDoUsage(token);
   const base = { render: 'true', timeout: '60000' };
   const strategies: { name: string; run: () => Promise<string> }[] = [
+    { name: 'scrape.do render (no super)', run: () => scrapeDoOnce(token, { ...base, customWait: '4000' }) },
     { name: 'scrape.do super+render+waitSelector', run: () => scrapeDoOnce(token, { ...base, super: 'true', waitSelector: '.daily-bet-fixture-content', customWait: '2000' }) },
     { name: 'scrape.do super+render, long wait', run: () => scrapeDoOnce(token, { ...base, super: 'true', customWait: '6000' }) },
     { name: 'scrape.do super+render, geo gb', run: () => scrapeDoOnce(token, { ...base, super: 'true', geoCode: 'gb', customWait: '4000' }) },
-    { name: 'scrape.do render (no super)', run: () => scrapeDoOnce(token, { ...base, customWait: '4000' }) },
     { name: 'jina browser engine', run: fetchViaJina },
   ];
   const errors: string[] = [];

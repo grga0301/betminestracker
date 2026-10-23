@@ -10,6 +10,7 @@ import { FstSection } from '@/components/FstSection';
 import { FtSection } from '@/components/FtSection';
 import { ExtSection } from '@/components/ExtSection';
 import { StreakAlert } from '@/components/StreakAlert';
+import { SourceHealth } from '@/components/SourceHealth';
 import type { DoubleRecord, Stats } from '@/lib/types';
 
 const DEFAULT_STATS: Stats = {
@@ -54,6 +55,7 @@ export default function HomePage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <StreakAlert />
+        <SourceHealth />
 
         <div className="flex justify-end mb-3">
           <Link href="/dashboard" className="text-[11px] uppercase tracking-wider text-[var(--accent)] hover:underline">
