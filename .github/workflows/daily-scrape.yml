@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: '17 1 * * *'  # inside BetMines publish window (GitHub delays crons by hours)
     - cron: '47 2 * * *'
+    - cron: '23 5 * * *'  # retries: a run exits at once if today's double is already saved
+    - cron: '41 8 * * *'
   workflow_dispatch:
 
 jobs:
@@ -29,3 +31,4 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SCRAPEDO_TOKEN: ${{ secrets.SCRAPEDO_TOKEN }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}

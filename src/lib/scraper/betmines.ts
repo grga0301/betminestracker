@@ -83,37 +83,75 @@ function resolveMarket(marketLabel: string, pick: string): { market: string; lin
   return { market: marketLabel || pick, line: null };
 }
 
-/**
- * Fetches the rendered daily page through Scrape.do (residential proxy + JS rendering, ~25 credits/call).
- * Throws if the response is still a Cloudflare page, so nothing wrong is ever saved.
- */
-async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
-  const params = new URLSearchParams({
-    token,
-    url: BETMINES_URL,
-    render: 'true',
-    super: 'true',
-    waitSelector: '.daily-bet-fixture-content',
-    customWait: '2000',
-    timeout: '60000',
-  });
-  console.log('[Scraper] Fetching BetMines via Scrape.do …');
-  // Scrape.do occasionally fails on protected sites (ROTATION_FAILED, 502) — retry a few times.
-  let html = '';
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await fetch(`https://api.scrape.do/?${params}`, { signal: AbortSignal.timeout(90_000) });
-    html = await res.text();
-    if (res.ok) break;
-    const msg = `Scrape.do HTTP ${res.status}: ${html.slice(0, 200).replace(/\s+/g, ' ')}`;
-    if (attempt === 3 || res.status < 500) throw new Error(msg);
-    console.log(`[Scraper] ${msg} — retry ${attempt}/2`);
-    await new Promise((r) => setTimeout(r, 5000));
+function looksLikeBetMines(html: string): boolean {
+  return !/Just a moment|unable to access betmines/i.test(html) && html.includes('daily-bet-fixture');
+}
+
+/** Best-effort log of the Scrape.do account state (remaining credits), to spot quota/token problems. */
+async function logScrapeDoUsage(token: string): Promise<void> {
+  try {
+    const res = await fetch(`https://api.scrape.do/info?token=${token}`, { signal: AbortSignal.timeout(15_000) });
+    const text = (await res.text()).replace(/\s+/g, ' ').slice(0, 300);
+    console.log(`[Scraper] Scrape.do account info (HTTP ${res.status}): ${text}`);
+  } catch (e) {
+    console.log(`[Scraper] Scrape.do account info unavailable: ${(e as Error).message}`);
   }
-  if (/Just a moment|unable to access betmines/i.test(html) || !html.includes('daily-bet-fixture')) {
+}
+
+/** One Scrape.do request with the given option set; returns HTML or throws a short reason. */
+async function scrapeDoOnce(token: string, opts: Record<string, string>): Promise<string> {
+  const params = new URLSearchParams({ token, url: BETMINES_URL, ...opts });
+  const res = await fetch(`https://api.scrape.do/?${params}`, { signal: AbortSignal.timeout(100_000) });
+  const html = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${html.slice(0, 160).replace(/\s+/g, ' ')}`);
+  if (!looksLikeBetMines(html)) {
     const title = html.match(/<title>([^<]*)/)?.[1] ?? '(no title)';
-    throw new Error(`Scrape.do returned no fixtures (${html.length} bytes, title "${title}")`);
+    throw new Error(`no fixtures (${html.length} bytes, title "${title}")`);
   }
   return html;
+}
+
+/** Fallback: r.jina.ai with its browser engine (free; sometimes passes where others fail). */
+async function fetchViaJina(): Promise<string> {
+  const headers: Record<string, string> = { 'X-Return-Format': 'html', 'X-Engine': 'browser', 'X-Wait-For-Selector': '.daily-bet-fixture-content' };
+  if (process.env.JINA_API_KEY) headers.Authorization = `Bearer ${process.env.JINA_API_KEY}`;
+  const res = await fetch(`https://r.jina.ai/${BETMINES_URL}`, { headers, signal: AbortSignal.timeout(90_000) });
+  const html = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${html.slice(0, 160).replace(/\s+/g, ' ')}`);
+  if (!looksLikeBetMines(html)) throw new Error(`no fixtures (${html.length} bytes)`);
+  return html;
+}
+
+/**
+ * Fetches the rendered daily page. Tries a chain of strategies (several Scrape.do option sets, then Jina)
+ * and returns the first HTML that really contains the fixtures, so nothing wrong is ever saved.
+ * Each Scrape.do call costs credits (~25 with super+render), so the chain is capped.
+ */
+async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
+  await logScrapeDoUsage(token);
+  const base = { render: 'true', timeout: '60000' };
+  const strategies: { name: string; run: () => Promise<string> }[] = [
+    { name: 'scrape.do super+render+waitSelector', run: () => scrapeDoOnce(token, { ...base, super: 'true', waitSelector: '.daily-bet-fixture-content', customWait: '2000' }) },
+    { name: 'scrape.do super+render, long wait', run: () => scrapeDoOnce(token, { ...base, super: 'true', customWait: '6000' }) },
+    { name: 'scrape.do super+render, geo gb', run: () => scrapeDoOnce(token, { ...base, super: 'true', geoCode: 'gb', customWait: '4000' }) },
+    { name: 'scrape.do render (no super)', run: () => scrapeDoOnce(token, { ...base, customWait: '4000' }) },
+    { name: 'jina browser engine', run: fetchViaJina },
+  ];
+  const errors: string[] = [];
+  for (const [i, st] of strategies.entries()) {
+    try {
+      console.log(`[Scraper] Strategy ${i + 1}/${strategies.length}: ${st.name} …`);
+      const html = await st.run();
+      console.log(`[Scraper] Strategy ${i + 1} OK (${html.length} bytes).`);
+      return html;
+    } catch (e) {
+      const msg = `${st.name}: ${(e as Error).message}`;
+      console.log(`[Scraper] ✗ ${msg}`);
+      errors.push(msg);
+      await new Promise((r) => setTimeout(r, 4000));
+    }
+  }
+  throw new Error(`All fetch strategies failed — ${errors.join(' | ')}`.slice(0, 1500));
 }
 
 /**
