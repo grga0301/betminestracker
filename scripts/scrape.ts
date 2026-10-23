@@ -27,10 +27,10 @@ async function main() {
     }
 
     // The scraping API costs ~25 credits per call (free plan ≈ 1000/month), and BetMines publishes the
-    // double around midnight UTC — so scheduled runs only call it in that window (00-05 UTC, wide because GitHub delays crons). Manual runs always go.
+    // double around midnight UTC — so scheduled runs only call it in that window (00-11 UTC, wide because GitHub delays crons by up to ~6h). Manual runs always go.
     const hour = new Date().getUTCHours();
-    if (process.env.SCRAPEDO_TOKEN && process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch' && ![0, 1, 2, 3, 4, 5].includes(hour)) {
-      console.log(`⏭ ${hour}:00 UTC is outside the 00–05 UTC publish window — skipping to save API credits.`);
+    if (process.env.SCRAPEDO_TOKEN && process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch' && hour > 11) {
+      console.log(`⏭ ${hour}:00 UTC is outside the 00–11 UTC publish window — skipping to save API credits.`);
       process.exit(0);
     }
 
