@@ -6,6 +6,10 @@ on:
     - cron: '45 21 * * *'  # evening (UTC) = 23:45 / 00:05 Zagreb in summer time
   workflow_dispatch:
 
+env:
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
 jobs:
   scrape-fst:
     runs-on: ubuntu-latest
@@ -28,3 +32,10 @@ jobs:
         run: npm run scrape:fst
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Notify failure (Telegram)
+        if: failure()
+        run: |
+          if [ -n "$TELEGRAM_CHAT_ID" ] && [ -n "$TELEGRAM_BOT_TOKEN" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"               -d chat_id="${TELEGRAM_CHAT_ID}"               --data-urlencode text="❌ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > /dev/null || true
+          fi

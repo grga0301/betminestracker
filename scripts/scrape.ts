@@ -2,6 +2,7 @@
 // Run with: npm run scrape
 // Scrapes today's BetMines double and saves to SQLite
 
+import { notifyNewTips } from '../src/lib/services/telegramService';
 import { PrismaClient } from '@prisma/client';
 import { scrapeTodaysDouble } from '../src/lib/scraper/betmines';
 
@@ -75,6 +76,7 @@ async function main() {
     });
 
     console.log('✓ Saved to database!\n');
+    await notifyNewTips('BETMINES', created.date, created.selections.map((s) => ({ homeTeam: s.homeTeam, awayTeam: s.awayTeam, market: s.market, odd: s.odd })), created.totalOdds);
     console.log(`  ID:         ${created.id}`);
     console.log(`  Date:       ${created.date}`);
     console.log(`  Total Odds: ×${created.totalOdds.toFixed(2)}`);

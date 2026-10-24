@@ -1,0 +1,17 @@
+name: Telegram Setup (manual)
+
+# Finds the chat id of whoever last messaged the bot (getUpdates) and sends a test message.
+# Message the bot once in Telegram first; Telegram keeps updates for ~24 h.
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discover chat id
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" | jq -r '"Bot: @" + (.result.username // "?")'
+          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | jq -r '[.result[] | (.message // .my_chat_member // .channel_post).chat | select(.type == "private") | .id] | unique | "Chat ids: " + (map(tostring) | join(","))'

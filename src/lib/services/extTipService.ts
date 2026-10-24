@@ -133,3 +133,14 @@ export async function updateExtTipResult(
 export async function updateExtTipLegs(id: number, status: 'PENDING' | 'WIN' | 'LOSS', legs: ExtLeg[]) {
   return prisma.extTip.update({ where: { id }, data: { status, legs: JSON.stringify(legs) } });
 }
+
+/** Subset of `tips` that are not stored yet (unique on source, date, rank) — call before saveExtTips. */
+export async function findNewExtTips<T extends { source: string; date: string; rank: number }>(tips: T[]): Promise<T[]> {
+  if (tips.length === 0) return [];
+  const existing = await prisma.extTip.findMany({
+    where: { OR: tips.map((t) => ({ source: t.source, date: t.date, rank: t.rank })) },
+    select: { source: true, date: true, rank: true },
+  });
+  const have = new Set(existing.map((e) => `${e.source}|${e.date}|${e.rank}`));
+  return tips.filter((t) => !have.has(`${t.source}|${t.date}|${t.rank}`));
+}

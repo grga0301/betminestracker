@@ -1,4 +1,5 @@
 // scripts/scrape-ft.ts — npm run scrape:ft
+import { notifyNewTips } from '../src/lib/services/telegramService';
 import { scrapeFtBetOfTheDay } from '../src/lib/scraper/freetips';
 import { saveFtTip } from '../src/lib/services/ftService';
 
@@ -17,6 +18,7 @@ async function main() {
     console.log(`\n  ℹ Tip for ${tip.date} already exists.`);
   } else if (saved) {
     console.log(`\n  ✓ Tip saved for ${tip.date}`);
+    await notifyNewTips('FT', tip.date, [{ homeTeam: tip.homeTeam, awayTeam: tip.awayTeam, market: tip.pick, odd: tip.odd, kickoff: tip.kickoff }]);
   }
 }
 

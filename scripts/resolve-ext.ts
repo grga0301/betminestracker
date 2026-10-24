@@ -1,4 +1,5 @@
 // scripts/resolve-ext.ts — npm run resolve:ext
+import { notifyResult } from '../src/lib/services/telegramService';
 import { getPendingExtTips, getScoredExtTips, updateExtTipResult, updateExtTipLegs } from '../src/lib/services/extTipService';
 import { evaluateExtMarket } from '../src/lib/services/extTipEvaluator';
 import { fetchZulubetScore } from '../src/lib/scraper/zulubet';
@@ -77,6 +78,7 @@ async function main() {
         ? 'WIN'
         : 'PENDING';
       await updateExtTipLegs(tip.id, status, legs);
+      if (status !== 'PENDING') await notifyResult(tip.source, tip, status);
       const done = legs.filter((l) => l.status !== 'PENDING').length;
       console.log(`  ${status === 'WIN' ? '🟢' : status === 'LOSS' ? '🔴' : '⏳'} ${status} (${done}/${legs.length} legs settled)\n`);
       continue;
@@ -101,6 +103,7 @@ async function main() {
       continue;
     }
     await updateExtTipResult(tip.id, status, score.homeScore, score.awayScore);
+    await notifyResult(tip.source, { ...tip, market: tip.pick || tip.market }, status, score);
     console.log(`  ${status === 'WIN' ? '🟢' : '🔴'} ${score.homeScore}-${score.awayScore} → ${status}\n`);
   }
 }

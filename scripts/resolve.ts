@@ -167,6 +167,11 @@ async function main() {
           data: { status: newStatus },
         });
 
+        await sendTelegramMessage(
+          `${newStatus === 'WIN' ? '🏆' : '❌'} <b>BetMines Double</b> · ${newStatus} · ${double.date}\n` +
+            updatedSelections.map((s) => `• ${s.homeTeam} – ${s.awayTeam}: ${s.resultStatus} (${s.homeScore ?? '?'}-${s.awayScore ?? '?'})`).join('\n') +
+            `\nKoeficijent: ×${double.totalOdds.toFixed(2)}`
+        );
         const icon = newStatus === 'WIN' ? '🏆' : '❌';
         console.log(`\n  ${icon} Double ${double.id} → ${newStatus} (×${double.totalOdds.toFixed(2)})\n`);
       } else {
