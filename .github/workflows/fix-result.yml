@@ -1,0 +1,37 @@
+name: Fix Result (manual)
+
+# Manually set the score of a BetMines selection and re-evaluate its double (scripts/fix-result.ts).
+on:
+  workflow_dispatch:
+    inputs:
+      home:
+        description: 'Home team (substring)'
+        required: true
+      away:
+        description: 'Away team (substring)'
+        required: true
+      home_score:
+        description: 'Home score'
+        required: true
+      away_score:
+        description: 'Away score'
+        required: true
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsx scripts/fix-result.ts "$HOME_TEAM" "$AWAY_TEAM" "$HOME_SCORE" "$AWAY_SCORE"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HOME_TEAM: ${{ inputs.home }}
+          AWAY_TEAM: ${{ inputs.away }}
+          HOME_SCORE: ${{ inputs.home_score }}
+          AWAY_SCORE: ${{ inputs.away_score }}
