@@ -2,6 +2,7 @@
 // Run with: npm run resolve
 // Checks pending doubles and updates results
 
+import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { PrismaClient } from '@prisma/client';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
 import { evaluateDouble } from '../src/lib/services/resultEvaluator';
@@ -195,7 +196,6 @@ async function main() {
       console.log(`Win rate: ${wr}%`);
     }
 
-    // Check for 5+ consecutive losses and send Telegram notification
     const resolved = allDoubles.filter((d) => d.status !== 'PENDING');
     let lossStreak = 0;
     for (const d of resolved) {
@@ -203,18 +203,6 @@ async function main() {
       else break;
     }
     console.log(`Current loss streak: ${lossStreak}`);
-    if (lossStreak >= 5) {
-      const winRate = wins + losses > 0 ? ((wins / (wins + losses)) * 100).toFixed(1) : '0.0';
-      await sendTelegramMessage(
-        `🚨 <b>BetMines Double Tracker — Upozorenje!</b>\n\n` +
-        `❌ Trenutni niz poraza: <b>${lossStreak} zaredom</b>\n\n` +
-        `📊 Statistika:\n` +
-        `• Pobjede: ${wins}\n` +
-        `• Porazi: ${losses}\n` +
-        `• Win rate: ${winRate}%\n\n` +
-        `🔗 betminestracker.vercel.app`
-      );
-    }
 
     console.log('\n  Open https://betminestracker.vercel.app to view updated results');
   } catch (err) {
@@ -225,4 +213,4 @@ async function main() {
   }
 }
 
-main();
+withLossStreakAlert(main);

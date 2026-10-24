@@ -1,4 +1,5 @@
 // scripts/resolve-ft.ts — npm run resolve:ft
+import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingFtTips, updateFtTipResult, getAllFtTips } from '../src/lib/services/ftService';
 import { sendTelegramMessage, notifyResult } from '../src/lib/services/telegramService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
@@ -65,7 +66,6 @@ async function main() {
     console.log(`Win rate: ${((wins / (wins + losses)) * 100).toFixed(1)}%`);
   }
 
-  // Telegram alert after 4+ consecutive losses
   const resolved = all.filter((t) => t.status !== 'PENDING');
   let lossStreak = 0;
   for (const t of resolved) {
@@ -74,21 +74,9 @@ async function main() {
   }
   console.log(`Current FT loss streak: ${lossStreak}`);
 
-  if (lossStreak >= 4) {
-    const winRate = wins + losses > 0 ? ((wins / (wins + losses)) * 100).toFixed(1) : '0.0';
-    await sendTelegramMessage(
-      `🚨 <b>FreeTips.com — Upozorenje!</b>\n\n` +
-      `❌ Trenutni niz poraza: <b>${lossStreak} zaredom</b>\n\n` +
-      `📊 Statistika:\n` +
-      `• Pobjede: ${wins}\n` +
-      `• Porazi: ${losses}\n` +
-      `• Win rate: ${winRate}%\n\n` +
-      `🔗 betminestracker.vercel.app`
-    );
-  }
 }
 
-main().catch((err) => {
+withLossStreakAlert(main).catch((err) => {
   console.error('✗ resolve-ft failed:', err);
   process.exit(1);
 });
