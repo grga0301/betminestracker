@@ -14,7 +14,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" | jq -r '"Bot: @" + (.result.username // "?")'
-          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | jq -r '[.result[] | (.message // .my_chat_member // .channel_post).chat | select(.type == "private") | .id] | unique | "Chat ids: " + (map(tostring) | join(","))'
+          curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | jq -r '[.result[] | (.message // .my_chat_member // .channel_post).chat | select(.type == "private" or .type == "group" or .type == "supergroup") | "(.type):(.id)"] | unique | "Chat ids: " + (map(tostring) | join(","))'
       - name: Send test message
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
