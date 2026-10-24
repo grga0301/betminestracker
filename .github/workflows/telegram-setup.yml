@@ -15,3 +15,9 @@ jobs:
         run: |
           curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" | jq -r '"Bot: @" + (.result.username // "?")'
           curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | jq -r '[.result[] | (.message // .my_chat_member // .channel_post).chat | select(.type == "private") | .id] | unique | "Chat ids: " + (map(tostring) | join(","))'
+      - name: Send test message
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" -d chat_id="${TELEGRAM_CHAT_ID}" --data-urlencode text="✅ Betmines tracker povezan: dolazit će obavijesti o novim tipovima, rezultatima i nizu od 4 gubitka." | jq -r '"Test message ok: " + (.ok|tostring)'
