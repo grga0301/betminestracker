@@ -119,3 +119,13 @@ model ExtTip {
   @@unique([source, date, rank])
   @@index([source, status])
 }
+
+// Consecutive scrape failures per source, used for the "failed N times in a row" Telegram alert.
+model SourceStatus {
+  source      String    @id
+  failures    Int       @default(0)
+  lastOkAt    DateTime?
+  lastFailAt  DateTime?
+  lastError   String?
+  updatedAt   DateTime  @updatedAt
+}
