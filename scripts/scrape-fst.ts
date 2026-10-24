@@ -1,6 +1,5 @@
 // scripts/scrape-fst.ts
 // Run with: npm run scrape:fst
-import { recordSourceRun } from '../src/lib/services/sourceStatusService';
 import { notifyNewTips } from '../src/lib/services/telegramService';
 import { scrapeFstBetOfTheDay } from '../src/lib/scraper/freesupertips';
 import { saveFstTip } from '../src/lib/services/fstService';
@@ -16,7 +15,6 @@ async function main() {
 
   if (!tip) {
     console.log('✗ Could not extract Bet of the Day tip.');
-    await recordSourceRun('FST', false, 'could not extract tip');
     process.exit(1);
   }
 
@@ -27,7 +25,6 @@ async function main() {
   console.log(`     Kickoff: ${tip.kickoff}`);
 
   const { saved, alreadyExists } = await saveFstTip(tip);
-  await recordSourceRun('FST', true);
 
   if (alreadyExists) {
     console.log(`\n  ℹ Already have FST tip for ${tip.date} — skipping.`);
@@ -37,8 +34,7 @@ async function main() {
   }
 }
 
-main().catch(async (err) => {
+main().catch((err) => {
   console.error('✗ scrape-fst failed:', err);
-  await recordSourceRun('FST', false, err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

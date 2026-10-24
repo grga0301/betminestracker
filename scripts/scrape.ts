@@ -2,7 +2,6 @@
 // Run with: npm run scrape
 // Scrapes today's BetMines double and saves to SQLite
 
-import { recordSourceRun } from '../src/lib/services/sourceStatusService';
 import { notifyNewTips } from '../src/lib/services/telegramService';
 import { PrismaClient } from '@prisma/client';
 import { scrapeTodaysDouble } from '../src/lib/scraper/betmines';
@@ -21,7 +20,6 @@ async function main() {
     const existing = await prisma.betDouble.findUnique({ where: { date: today } });
 
     if (existing) {
-      await recordSourceRun('BETMINES', true);
       console.log(`✓ Double for ${today} already in database (id=${existing.id}).`);
       console.log('  Status:', existing.status);
       console.log('  Total Odds:', existing.totalOdds);
@@ -42,7 +40,6 @@ async function main() {
 
     if (!scraped) {
       console.error('✗ No double found on BetMines today.');
-      await recordSourceRun('BETMINES', false, 'no double found');
       process.exit(1);
     }
 
@@ -79,7 +76,6 @@ async function main() {
     });
 
     console.log('✓ Saved to database!\n');
-    await recordSourceRun('BETMINES', true);
     await notifyNewTips('BETMINES', created.date, created.selections.map((s) => ({ homeTeam: s.homeTeam, awayTeam: s.awayTeam, market: s.market, odd: s.odd })), created.totalOdds);
     console.log(`  ID:         ${created.id}`);
     console.log(`  Date:       ${created.date}`);
@@ -96,7 +92,6 @@ async function main() {
     console.log('  Open http://localhost:3000 to view in UI');
   } catch (err) {
     console.error('✗ Scrape failed:', err);
-    await recordSourceRun('BETMINES', false, err instanceof Error ? err.message : String(err));
     process.exit(1);
   } finally {
     await prisma.$disconnect();

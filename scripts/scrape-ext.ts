@@ -5,17 +5,6 @@ import { scrapeFootballParkToday } from '../src/lib/scraper/footballpark';
 import { scrapeZulubetToday } from '../src/lib/scraper/zulubet';
 import { saveExtTips, findNewExtTips } from '../src/lib/services/extTipService';
 import { notifyNewTips } from '../src/lib/services/telegramService';
-import { recordSourceRun } from '../src/lib/services/sourceStatusService';
-
-// Source key (as in the ExtTip table / status tracking) for each entry of SOURCES below.
-const SOURCE_KEY: Record<string, string> = {
-  TipOracle: 'TIPORACLE',
-  'FootyAccumulators/bet-of-the-day': 'FOOTYACCA',
-  'FootyAccumulators/btts': 'FOOTYACCA_BTTS',
-  'FootyAccumulators/over-2-5-trebles': 'FOOTYACCA_OVER25',
-  FootballPark: 'FOOTBALLPARK',
-  Zulubet: 'ZULUBET',
-};
 
 const SOURCES: [string, () => Promise<ExtScrapedTip[]>][] = [
   ['TipOracle', scrapeTipOracleToday],
@@ -42,13 +31,8 @@ async function main() {
       }
       console.log(`  ✓ ${name}: ${tips.length} found, ${added} new\n`);
       ok++;
-      // "Nothing found" counts as a failed run, except for the single Bet of the Day, which is often not published.
-      const key = SOURCE_KEY[name] ?? name;
-      if (tips.length === 0 && key !== 'FOOTYACCA') await recordSourceRun(key, false, 'no tips found');
-      else await recordSourceRun(key, true);
     } catch (err) {
       console.error(`  ✗ ${name} failed:`, err instanceof Error ? err.message : err, '\n');
-      await recordSourceRun(SOURCE_KEY[name] ?? name, false, err instanceof Error ? err.message : String(err));
     }
   }
   if (ok === 0) process.exit(1); // one source failing must not hide the others
