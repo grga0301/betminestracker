@@ -1,14 +1,39 @@
 // src/lib/services/fstResultFetcher.ts
 // Fetches match results: TheSportsDB → ESPN → SofaScore
 
+// Compact names that sources spell very differently.
+const TEAM_ALIASES: Record<string, string> = {
+  hearts: 'heartofmidlothian',
+  spurs: 'tottenhamhotspur',
+  wolves: 'wolverhamptonwanderers',
+  inter: 'internazionale',
+  intermilan: 'internazionale',
+};
+
+// Club-name filler words that differ between sources ("Celta de Vigo" vs "Celta Vigo").
+const TEAM_STOPWORDS = new Set(['fc', 'cf', 'afc', 'sc', 'ac', 'as', 'fk', 'sk', 'cd', 'ud', 'rc', 'de', 'of', 'the', 'club']);
+
 function normalize(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const compact = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return TEAM_ALIASES[compact] ?? compact;
+}
+
+function nameTokens(name: string): string[] {
+  return name
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t && !TEAM_STOPWORDS.has(t));
 }
 
 function teamsMatch(a: string, b: string): boolean {
   const na = normalize(a);
   const nb = normalize(b);
-  return na === nb || na.includes(nb) || nb.includes(na);
+  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
+  // Token fallback: every meaningful word of the shorter name appears in the longer one.
+  const ta = nameTokens(a);
+  const tb = nameTokens(b);
+  const [small, big] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  return small.length > 0 && small.every((t) => big.includes(t));
 }
 
 function isFinished(strStatus: string): boolean {
