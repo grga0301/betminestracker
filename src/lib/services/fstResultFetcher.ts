@@ -97,21 +97,41 @@ function findInSportsDBEvents(events: any[], homeTeam: string, awayTeam: string)
   return null;
 }
 
+// TheSportsDB's old free key "3" was permanently disabled (403); "123" is the current public test key.
+const SPORTSDB_KEY = '123';
+
+/** Query strings for searchevents: full names, filler words dropped, and first significant word only. */
+function sportsDbQueries(homeTeam: string, awayTeam: string): string[] {
+  const first = (n: string) => nameTokens(n)[0] ?? n;
+  const stripped = (n: string) => nameTokens(n).join(' ') || n;
+  const variants = [
+    [homeTeam, awayTeam],
+    [stripped(homeTeam), stripped(awayTeam)],
+    [first(homeTeam), first(awayTeam)],
+  ];
+  const out = new Set<string>();
+  for (const [h, a] of variants) {
+    out.add(`${h} vs ${a}`);
+    out.add(`${a} vs ${h}`);
+  }
+  return [...out].map((q) => encodeURIComponent(q));
+}
+
 async function fetchFromSportsDB(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
-  const dayJson = await fetchJson(`https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${date}&s=Soccer`);
+  const base = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}`;
+  const dayJson = await fetchJson(`${base}/eventsday.php?d=${date}&s=Soccer`);
   if (dayJson) {
     const found = findInSportsDBEvents(dayJson.events ?? [], homeTeam, awayTeam);
     if (found) return found;
   }
 
-  for (const query of [
-    encodeURIComponent(`${homeTeam} vs ${awayTeam}`),
-    encodeURIComponent(`${awayTeam} vs ${homeTeam}`),
-  ]) {
-    const json = await fetchJson(`https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${query}`);
-    if (json) {
-      const onDate = (json.event ?? []).filter((e: any) => e.dateEvent === date);
-      const found = findInSportsDBEvents(onDate, homeTeam, awayTeam);
+  // Some sources date a tip one day after the match — accept the previous day too.
+  const prev = new Date(Date.parse(date) - 864e5).toISOString().slice(0, 10);
+  for (const query of sportsDbQueries(homeTeam, awayTeam)) {
+    const json = await fetchJson(`${base}/searchevents.php?e=${query}`);
+    if (!json) continue;
+    for (const day of [date, prev]) {
+      const found = findInSportsDBEvents((json.event ?? []).filter((e: any) => e.dateEvent === day), homeTeam, awayTeam);
       if (found) return found;
     }
   }
