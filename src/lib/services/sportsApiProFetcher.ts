@@ -74,7 +74,7 @@ async function daySchedule(date: string): Promise<Row[] | null> {
   return (await fetchDay(date)) ?? cached?.rows ?? null;
 }
 
-/** Final score of home vs away on `date` (or the day before), or null. Only finished matches count. */
+/** Final score of home vs away on `date` (or the day after/before), or null. Only finished matches count. */
 export async function fetchScoreFromSportsApiPro(
   home: string,
   away: string,
@@ -86,8 +86,10 @@ export async function fetchScoreFromSportsApiPro(
   const tooEarly = kickoffMs !== undefined ? Date.now() < kickoffMs + 2 * 3600 * 1000 : date >= new Date().toISOString().slice(0, 10);
   if (tooEarly) return null;
 
-  const prev = new Date(Date.parse(date) - 864e5).toISOString().slice(0, 10);
-  for (const day of [date, prev]) {
+  // Schedules are by UTC day: an evening match in the Americas lands on the next day, a late tip date on the previous one.
+  const shift = (n: number) => new Date(Date.parse(date) + n * 864e5).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  for (const day of [date, shift(1), shift(-1)].filter((d) => d <= today)) {
     const rows = await daySchedule(day);
     if (!rows) continue;
     for (const [h, a, hs, as, status] of rows) {
