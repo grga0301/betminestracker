@@ -2,7 +2,7 @@
 import { giveUpOldPending } from '../src/lib/services/unresolvedService';
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingFtTips, updateFtTipResult, getAllFtTips } from '../src/lib/services/ftService';
-import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
+import { fetchScoreFromSportsDB, kickoffMsFrom } from '../src/lib/services/fstResultFetcher';
 import { evaluateStrict } from '../src/lib/services/geminiEvaluator';
 
 async function main() {
@@ -24,7 +24,7 @@ async function main() {
     console.log(`─── FT Tip ${tip.date}: ${tip.homeTeam} vs ${tip.awayTeam} ───`);
     console.log(`    Pick: ${tip.pick} | Market: ${tip.market}`);
 
-    const score = await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
+    const score = await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date, kickoffMsFrom(tip.date, tip.kickoff));
 
     if (!score) {
       console.log('  ⏳ Result not found — keeping PENDING\n');

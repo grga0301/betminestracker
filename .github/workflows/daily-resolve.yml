@@ -2,14 +2,18 @@ name: Daily Resolve
 
 on:
   schedule:
-    - cron: '50 6 * * *'  # morning (UTC)
-    - cron: '5 22 * * *'  # evening (UTC) = 23:45 / 00:05 Zagreb in summer time
+    - cron: '7,37 9-23 * * *'  # every 30 min while matches are being played
+    - cron: '7 0-8 * * *'  # hourly overnight
   workflow_dispatch:
 
 env:
   JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
   resolve:

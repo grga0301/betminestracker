@@ -3,7 +3,7 @@
 import { giveUpOldPending } from '../src/lib/services/unresolvedService';
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingFstTips, updateFstTipResult, getAllFstTips } from '../src/lib/services/fstService';
-import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
+import { fetchScoreFromSportsDB, kickoffMsFrom } from '../src/lib/services/fstResultFetcher';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
 import { evaluateStrict } from '../src/lib/services/geminiEvaluator';
 
@@ -65,7 +65,7 @@ async function main() {
 
     // 1. Try TheSportsDB
     console.log('  🔍 Trying TheSportsDB...');
-    score = await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
+    score = await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date, kickoffMsFrom(tip.date, tip.kickoff));
     // FST publishes the pick the day before, so the stored date can be a day earlier than the match.
     score ??= await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, new Date(Date.parse(tip.date) + 864e5).toISOString().slice(0, 10));
     if (score) {

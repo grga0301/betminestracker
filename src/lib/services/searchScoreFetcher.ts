@@ -169,9 +169,11 @@ async function llmVote(snips: Snippet[], home: string, away: string, date: strin
   }
 }
 
-export async function fetchScoreViaSearch(home: string, away: string, date: string): Promise<Score | null> {
-  // Never look for matches that may still be running or only just ended.
-  if (date >= new Date().toISOString().slice(0, 10)) return null;
+export async function fetchScoreViaSearch(home: string, away: string, date: string, kickoffMs?: number): Promise<Score | null> {
+  // Never look for matches that may still be running: with a known kickoff wait 3 h after it (same-day results are
+  // welcome), without one only search for matches from earlier days.
+  const tooEarly = kickoffMs !== undefined ? Date.now() < kickoffMs + 3 * 3600 * 1000 : date >= new Date().toISOString().slice(0, 10);
+  if (tooEarly) return null;
   const snips = await searchSnippets(home, away, date);
   if (snips.length === 0) return null;
   const [y, mo, d] = date.split('-').map(Number);

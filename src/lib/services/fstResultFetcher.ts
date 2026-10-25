@@ -325,10 +325,20 @@ async function fetchFromSofaScore(homeTeam: string, awayTeam: string, date: stri
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/**
+ * Kickoff (ms) from a tip date + "HH:MM". The clock time is read as UTC on purpose: the sources publish local times (UTC+1/+2),
+ * so this is later than the real kickoff, which keeps the "match is over" estimate on the safe side.
+ */
+export function kickoffMsFrom(date: string, hhmm?: string | null): number | undefined {
+  const m = (hhmm ?? '').match(/^(\d{1,2}):(\d{2})/);
+  return m ? Date.parse(`${date}T${m[1].padStart(2, '0')}:${m[2]}:00Z`) : undefined;
+}
+
 export async function fetchScoreFromSportsDB(
   homeTeam: string,
   awayTeam: string,
-  date: string
+  date: string,
+  kickoffMs?: number
 ): Promise<MatchScore | null> {
   console.log(`  [Fetch] TheSportsDB...`);
   const sportsDb = await fetchFromSportsDB(homeTeam, awayTeam, date);
@@ -367,7 +377,7 @@ export async function fetchScoreFromSportsDB(
   if (process.env.JINA_API_KEY) {
     console.log(`  [Fetch] Web search...`);
     const { fetchScoreViaSearch } = await import('./searchScoreFetcher');
-    const found = await fetchScoreViaSearch(homeTeam, awayTeam, date);
+    const found = await fetchScoreViaSearch(homeTeam, awayTeam, date, kickoffMs);
     if (found) { console.log(`  [Fetch] Web search: ${found.homeScore}-${found.awayScore}`); return found; }
     console.log(`  [Fetch] Web search: no result`);
   }

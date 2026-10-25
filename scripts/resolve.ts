@@ -112,7 +112,7 @@ async function main() {
         if (!score) {
           // 3. Fallback: TheSportsDB + ESPN + SofaScore
           console.log(`     Trying TheSportsDB / ESPN / SofaScore...`);
-          score = await fetchScoreFromSportsDB(sel.homeTeam, sel.awayTeam, double.date);
+          score = await fetchScoreFromSportsDB(sel.homeTeam, sel.awayTeam, double.date, sel.kickoff ? new Date(sel.kickoff).getTime() : undefined);
           if (score) {
             console.log(`     ✓ External API: ${score.homeScore}-${score.awayScore}`);
           }

@@ -4,7 +4,7 @@ import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingExtTips, getScoredExtTips, updateExtTipResult, updateExtTipLegs } from '../src/lib/services/extTipService';
 import { evaluateExtMarket } from '../src/lib/services/extTipEvaluator';
 import { fetchZulubetScore } from '../src/lib/scraper/zulubet';
-import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
+import { fetchScoreFromSportsDB, kickoffMsFrom } from '../src/lib/services/fstResultFetcher';
 import { evaluateWithGemini } from '../src/lib/services/geminiEvaluator';
 import type { ExtLeg } from '../src/lib/scraper/tiporacle';
 
@@ -41,7 +41,7 @@ async function resolveLegs(legs: ExtLeg[]): Promise<ExtLeg[]> {
       continue;
     }
     console.log(`    leg: ${leg.homeTeam} vs ${leg.awayTeam} | ${leg.market}`);
-    const score = await fetchScoreFromSportsDB(leg.homeTeam, leg.awayTeam, leg.kickoffIso.slice(0, 10));
+    const score = await fetchScoreFromSportsDB(leg.homeTeam, leg.awayTeam, leg.kickoffIso.slice(0, 10), Date.parse(leg.kickoffIso));
     if (!score) {
       console.log('      ⏳ no final score yet');
       out.push(leg);
@@ -92,7 +92,7 @@ async function main() {
       console.log('  [Fetch] reused score from another source');
       score = { homeScore: known.homeScore!, awayScore: known.awayScore! };
     }
-    score ??= await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date);
+    score ??= await fetchScoreFromSportsDB(tip.homeTeam, tip.awayTeam, tip.date, kickoffMsFrom(tip.date, tip.kickoff));
     if (!score) {
       console.log('  ⏳ no final score yet — keeping PENDING\n');
       continue;
