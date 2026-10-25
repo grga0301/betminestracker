@@ -127,7 +127,8 @@ export function parseFreeTipsDouble(html: string, now = Date.now()): ExtScrapedT
   return [{ ...base, market: label, pick: label, legs: sorted }];
 }
 
-export async function scrapeFreeTipsDoubleToday(): Promise<ExtScrapedTip[]> {
+/** `includeStarted` stores a ticket even though its first match has begun (manual one-off backfill only). */
+export async function scrapeFreeTipsDoubleToday(includeStarted = false): Promise<ExtScrapedTip[]> {
   const jinaKey = process.env.JINA_API_KEY;
   const routes = [
     { name: 'direct', url: URL, headers: { 'User-Agent': UA, 'Accept-Language': 'en' } as Record<string, string> },
@@ -144,7 +145,7 @@ export async function scrapeFreeTipsDoubleToday(): Promise<ExtScrapedTip[]> {
       const body = await res.text();
       if (res.ok && body.includes('m-name')) {
         console.log(`  (freetips double fetched via ${r.name})`);
-        return parseFreeTipsDouble(body);
+        return parseFreeTipsDouble(body, includeStarted ? 0 : Date.now());
       }
       failures.push(`${r.name}: HTTP ${res.status}, ${body.length}B`);
     } catch (e) {
