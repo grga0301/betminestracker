@@ -8,6 +8,7 @@ on:
 
 env:
   JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+  SPORTSAPIPRO_KEY: ${{ secrets.SPORTSAPIPRO_KEY }}
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 

@@ -134,3 +134,10 @@ model LlmScore {
 
   @@index([date])
 }
+
+// Shared cache of SportsAPIPro day schedules (slim: teams, score, status), so the 100 calls/day free quota lasts.
+model ScheduleCache {
+  date      String   @id
+  matches   String   // JSON array of [home, away, homeScore, awayScore, statusType]
+  fetchedAt DateTime @default(now())
+}

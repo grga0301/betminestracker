@@ -356,6 +356,14 @@ export async function fetchScoreFromSportsDB(
   if (espn) { console.log(`  [Fetch] ESPN: ${espn.homeScore}-${espn.awayScore}`); return espn; }
   console.log(`  [Fetch] ESPN: no result`);
 
+  if (process.env.SPORTSAPIPRO_KEY) {
+    console.log(`  [Fetch] SportsAPIPro...`);
+    const { fetchScoreFromSportsApiPro } = await import('./sportsApiProFetcher');
+    const sap = await fetchScoreFromSportsApiPro(homeTeam, awayTeam, date, kickoffMs);
+    if (sap) { console.log(`  [Fetch] SportsAPIPro: ${sap.homeScore}-${sap.awayScore}`); return sap; }
+    console.log(`  [Fetch] SportsAPIPro: no result`);
+  }
+
   console.log(`  [Fetch] SportAPI7 (RapidAPI)...`);
   const sportApi7 = await fetchFromSportApi7(homeTeam, awayTeam, date);
   if (sportApi7) { console.log(`  [Fetch] SportAPI7: ${sportApi7.homeScore}-${sportApi7.awayScore}`); return sportApi7; }

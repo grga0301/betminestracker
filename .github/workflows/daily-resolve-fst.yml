@@ -8,6 +8,7 @@ on:
 
 env:
   JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+  SPORTSAPIPRO_KEY: ${{ secrets.SPORTSAPIPRO_KEY }}
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
@@ -29,6 +30,9 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium --with-deps
       - run: npx prisma generate
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Resolve FST pending tips
         run: npm run resolve:fst
