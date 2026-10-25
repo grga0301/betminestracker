@@ -35,7 +35,7 @@ function nameTokens(name: string): string[] {
     .filter((t) => t && !TEAM_STOPWORDS.has(t));
 }
 
-function teamsMatch(a: string, b: string): boolean {
+export function teamsMatch(a: string, b: string): boolean {
   const na = normalize(a);
   const nb = normalize(b);
   if (na === nb || na.includes(nb) || nb.includes(na)) return true;
@@ -361,6 +361,15 @@ export async function fetchScoreFromSportsDB(
     const apiFb = await fetchFromApiFootball(homeTeam, awayTeam, date);
     if (apiFb) { console.log(`  [Fetch] API-Football: ${apiFb.homeScore}-${apiFb.awayScore}`); return apiFb; }
     console.log(`  [Fetch] API-Football: no result`);
+  }
+
+  // Web search (Jina) — accepted only when two different sites state the same score.
+  if (process.env.JINA_API_KEY) {
+    console.log(`  [Fetch] Web search...`);
+    const { fetchScoreViaSearch } = await import('./searchScoreFetcher');
+    const found = await fetchScoreViaSearch(homeTeam, awayTeam, date);
+    if (found) { console.log(`  [Fetch] Web search: ${found.homeScore}-${found.awayScore}`); return found; }
+    console.log(`  [Fetch] Web search: no result`);
   }
 
   // Final fallback: Gemini with Google Search grounding
