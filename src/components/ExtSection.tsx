@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { ExtSource, ExtStats, ExtTipRecord } from '@/lib/services/extTipService';
 import { StatusBadge } from './StatusBadge';
 import { ALERT_STREAK } from '@/lib/streak';
+import { ViewMoreButton, PREVIEW_LIMIT } from './ViewMoreButton';
 
 interface Props {
   source: ExtSource;
@@ -21,6 +22,7 @@ export function ExtSection({ source, title, blurb }: Props) {
   const [tips, setTips] = useState<ExtTipRecord[]>([]);
   const [stats, setStats] = useState<ExtStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     fetch(`/api/ext/tips?source=${source}`)
@@ -31,7 +33,8 @@ export function ExtSection({ source, title, blurb }: Props) {
   }, [source]);
 
   // Group by day so every date shows its picks together (history stays readable).
-  const days = tips.reduce<Record<string, ExtTipRecord[]>>((acc, t) => {
+  const visibleTips = showAll ? tips : tips.slice(0, PREVIEW_LIMIT);
+  const days = visibleTips.reduce<Record<string, ExtTipRecord[]>>((acc, t) => {
     (acc[t.date] ??= []).push(t);
     return acc;
   }, {});
@@ -147,6 +150,7 @@ export function ExtSection({ source, title, blurb }: Props) {
           </div>
         ))}
       </div>
+      <ViewMoreButton total={tips.length} expanded={showAll} onToggle={() => setShowAll((v) => !v)} />
     </section>
   );
 }

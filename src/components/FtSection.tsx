@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { FtTipRecord, FtStats } from '@/lib/services/ftService';
 import { FtCard } from './FtCard';
+import { ViewMoreButton, PREVIEW_LIMIT } from './ViewMoreButton';
 
 const DEFAULT_STATS: FtStats = {
   total: 0, wins: 0, losses: 0, pending: 0,
@@ -13,6 +14,7 @@ export function FtSection() {
   const [tips, setTips] = useState<FtTipRecord[]>([]);
   const [stats, setStats] = useState<FtStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const [scrapingFt, setScrapingFt] = useState(false);
   const [resolvingFt, setResolvingFt] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -162,11 +164,12 @@ export function FtSection() {
 
       {!loading && tips.length > 0 && (
         <div className="space-y-3">
-          {tips.map((tip, i) => (
+          {(showAll ? tips : tips.slice(0, PREVIEW_LIMIT)).map((tip, i) => (
             <FtCard key={tip.id} tip={tip} index={i} />
           ))}
         </div>
       )}
+      <ViewMoreButton total={tips.length} expanded={showAll} onToggle={() => setShowAll((v) => !v)} />
 
       <div className="mt-8 pb-8 text-center">
         <p className="text-[10px] text-[var(--chalk-dim)] uppercase tracking-widest">

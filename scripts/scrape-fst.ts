@@ -1,6 +1,5 @@
 // scripts/scrape-fst.ts
 // Run with: npm run scrape:fst
-import { notifyNewTips } from '../src/lib/services/telegramService';
 import { scrapeFstBetOfTheDay } from '../src/lib/scraper/freesupertips';
 import { saveFstTip } from '../src/lib/services/fstService';
 
@@ -30,7 +29,6 @@ async function main() {
     console.log(`\n  ℹ Already have FST tip for ${tip.date} — skipping.`);
   } else if (saved) {
     console.log(`\n  ✓ FST tip saved for ${tip.date}`);
-    await notifyNewTips('FST', tip.date, [{ homeTeam: tip.homeTeam, awayTeam: tip.awayTeam, market: tip.pick, odd: tip.odd, kickoff: tip.kickoff }]);
   }
 }
 

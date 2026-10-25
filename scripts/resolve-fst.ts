@@ -2,7 +2,6 @@
 // Run with: npm run resolve:fst
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingFstTips, updateFstTipResult, getAllFstTips } from '../src/lib/services/fstService';
-import { sendTelegramMessage, notifyResult } from '../src/lib/services/telegramService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
 import { evaluateStrict } from '../src/lib/services/geminiEvaluator';
@@ -114,7 +113,6 @@ async function main() {
     }
 
     await updateFstTipResult(tip.id, score.homeScore, score.awayScore, status);
-    await notifyResult('FST', { ...tip, market: tip.pick }, status, score);
 
     const icon = status === 'WIN' ? '🟢' : status === 'LOSS' ? '🔴' : '⚫';
     console.log(`  ${icon} Result: ${score.homeScore}-${score.awayScore} → ${status}\n`);

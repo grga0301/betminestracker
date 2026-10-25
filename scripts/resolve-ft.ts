@@ -1,7 +1,6 @@
 // scripts/resolve-ft.ts — npm run resolve:ft
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingFtTips, updateFtTipResult, getAllFtTips } from '../src/lib/services/ftService';
-import { sendTelegramMessage, notifyResult } from '../src/lib/services/telegramService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
 import { evaluateStrict } from '../src/lib/services/geminiEvaluator';
 
@@ -48,7 +47,6 @@ async function main() {
     }
 
     await updateFtTipResult(tip.id, status, score.homeScore, score.awayScore);
-    await notifyResult('FT', { ...tip, market: tip.pick }, status, score);
 
     const icon = status === 'WIN' ? '🟢' : status === 'LOSS' ? '🔴' : '⚫';
     console.log(`  ${icon} Result: ${score.homeScore}-${score.awayScore} → ${status}\n`);

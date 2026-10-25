@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { FstTipRecord, FstStats } from '@/lib/types';
 import { FstCard } from './FstCard';
+import { ViewMoreButton, PREVIEW_LIMIT } from './ViewMoreButton';
 
 const DEFAULT_STATS: FstStats = {
   total: 0, wins: 0, losses: 0, pending: 0,
@@ -14,6 +15,7 @@ export function FstSection() {
   const [tips, setTips] = useState<FstTipRecord[]>([]);
   const [stats, setStats] = useState<FstStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const [scrapingFst, setScrapingFst] = useState(false);
   const [resolvingFst, setResolvingFst] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -168,11 +170,12 @@ export function FstSection() {
 
       {!loading && tips.length > 0 && (
         <div className="space-y-3">
-          {tips.map((tip, i) => (
+          {(showAll ? tips : tips.slice(0, PREVIEW_LIMIT)).map((tip, i) => (
             <FstCard key={tip.id} tip={tip} index={i} />
           ))}
         </div>
       )}
+      <ViewMoreButton total={tips.length} expanded={showAll} onToggle={() => setShowAll((v) => !v)} />
 
       <div className="mt-8 pb-8 text-center">
         <p className="text-[10px] text-[var(--chalk-dim)] uppercase tracking-widest">
