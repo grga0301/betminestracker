@@ -1,0 +1,23 @@
+name: Telegram Cleanup (one-off)
+
+on:
+  workflow_dispatch:
+    inputs:
+      cutoff_iso:
+        description: 'Delete bot messages sent since (UTC ISO time)'
+        required: true
+        default: '2026-10-24T22:00:00Z'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node scripts/telegram-cleanup.mjs
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CUTOFF_ISO: ${{ inputs.cutoff_iso }}
