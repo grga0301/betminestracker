@@ -1,4 +1,5 @@
 // scripts/resolve-ext.ts — npm run resolve:ext
+import { giveUpOldPending } from '../src/lib/services/unresolvedService';
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingExtTips, getScoredExtTips, updateExtTipResult, updateExtTipLegs } from '../src/lib/services/extTipService';
 import { evaluateExtMarket } from '../src/lib/services/extTipEvaluator';
@@ -106,7 +107,7 @@ async function main() {
   }
 }
 
-withLossStreakAlert(main).catch((err) => {
+withLossStreakAlert(async () => { await main(); await giveUpOldPending(); }).catch((err) => {
   console.error('✗ resolve-ext failed:', err);
   process.exit(1);
 });

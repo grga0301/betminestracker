@@ -1,7 +1,7 @@
 // src/lib/types.ts
 
-export type DoubleStatus = 'PENDING' | 'WIN' | 'LOSS' | 'VOID';
-export type SelectionStatus = 'PENDING' | 'WIN' | 'LOSS' | 'VOID';
+export type DoubleStatus = 'PENDING' | 'WIN' | 'LOSS' | 'VOID' | 'UNRESOLVED';
+export type SelectionStatus = 'PENDING' | 'WIN' | 'LOSS' | 'VOID' | 'UNRESOLVED';
 
 export interface ScrapedSelection {
   homeTeam: string;

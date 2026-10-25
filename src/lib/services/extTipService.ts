@@ -21,7 +21,7 @@ export interface ExtTipRecord {
   odd: number;
   confidence: number | null;
   legs: ExtLeg[] | null;
-  status: 'PENDING' | 'WIN' | 'LOSS' | 'VOID';
+  status: 'PENDING' | 'WIN' | 'LOSS' | 'VOID' | 'UNRESOLVED';
   homeScore: number | null;
   awayScore: number | null;
 }

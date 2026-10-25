@@ -1,5 +1,6 @@
 // scripts/resolve-fst.ts
 // Run with: npm run resolve:fst
+import { giveUpOldPending } from '../src/lib/services/unresolvedService';
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingFstTips, updateFstTipResult, getAllFstTips } from '../src/lib/services/fstService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
@@ -140,7 +141,7 @@ async function main() {
   console.log(`Current FST loss streak: ${lossStreak}`);
 }
 
-withLossStreakAlert(main).catch((err) => {
+withLossStreakAlert(async () => { await main(); await giveUpOldPending(); }).catch((err) => {
   console.error('✗ resolve-fst failed:', err);
   process.exit(1);
 });

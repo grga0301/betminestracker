@@ -175,7 +175,7 @@ export async function getStats(): Promise<Stats> {
   let currentStreak = 0;
   let streakType: 'WIN' | 'LOSS' | 'NONE' = 'NONE';
 
-  const resolved = [...doubles].reverse().filter((d) => d.status !== 'PENDING');
+  const resolved = [...doubles].reverse().filter((d) => d.status === 'WIN' || d.status === 'LOSS');
   if (resolved.length > 0) {
     streakType = resolved[0].status as 'WIN' | 'LOSS';
     for (const d of resolved) {

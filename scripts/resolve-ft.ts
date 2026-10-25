@@ -1,4 +1,5 @@
 // scripts/resolve-ft.ts — npm run resolve:ft
+import { giveUpOldPending } from '../src/lib/services/unresolvedService';
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { getPendingFtTips, updateFtTipResult, getAllFtTips } from '../src/lib/services/ftService';
 import { fetchScoreFromSportsDB } from '../src/lib/services/fstResultFetcher';
@@ -74,7 +75,7 @@ async function main() {
 
 }
 
-withLossStreakAlert(main).catch((err) => {
+withLossStreakAlert(async () => { await main(); await giveUpOldPending(); }).catch((err) => {
   console.error('✗ resolve-ft failed:', err);
   process.exit(1);
 });

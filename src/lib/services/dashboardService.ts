@@ -3,7 +3,7 @@
 
 import { prisma } from '../db/prisma';
 
-export type TipStatus = 'WIN' | 'LOSS' | 'PENDING' | 'VOID';
+export type TipStatus = 'WIN' | 'LOSS' | 'PENDING' | 'VOID' | 'UNRESOLVED';
 
 export interface NormTip {
   date: string; // YYYY-MM-DD

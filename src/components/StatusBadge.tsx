@@ -28,6 +28,12 @@ const CONFIG: Record<Status, { label: string; bg: string; text: string; dot: str
     text: 'text-yellow-400',
     dot: 'bg-yellow-400 pulse-pending',
   },
+  UNRESOLVED: {
+    label: 'NERJEŠIVO',
+    bg: 'bg-slate-500/10 border border-slate-500/20',
+    text: 'text-slate-400',
+    dot: 'bg-slate-400',
+  },
   VOID: {
     label: 'VOID',
     bg: 'bg-gray-500/10 border border-gray-500/20',

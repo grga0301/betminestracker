@@ -10,7 +10,7 @@ export interface FtTipRecord {
   market: string;
   kickoff: string;
   odd: number;
-  status: 'PENDING' | 'WIN' | 'LOSS' | 'VOID';
+  status: 'PENDING' | 'WIN' | 'LOSS' | 'VOID' | 'UNRESOLVED';
   homeScore: number | null;
   awayScore: number | null;
 }
@@ -74,7 +74,7 @@ export async function getFtStats(): Promise<FtStats> {
 
   let currentStreak = 0;
   let streakType: 'WIN' | 'LOSS' | 'NONE' = 'NONE';
-  const resolved = [...tips].reverse().filter((t) => t.status !== 'PENDING');
+  const resolved = [...tips].reverse().filter((t) => t.status === 'WIN' || t.status === 'LOSS');
   if (resolved.length > 0) {
     streakType = resolved[0].status as 'WIN' | 'LOSS';
     for (const t of resolved) {

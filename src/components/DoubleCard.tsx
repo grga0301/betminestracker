@@ -40,6 +40,7 @@ export function DoubleCard({ double, index }: Props) {
     LOSS: 'card-loss',
     PENDING: 'card-pending',
     VOID: '',
+    UNRESOLVED: '',
   }[double.status];
 
   const delay = `${index * 60}ms`;

@@ -23,6 +23,7 @@ export function FstCard({ tip, index }: Props) {
     LOSS: 'card-loss',
     PENDING: 'card-pending',
     VOID: '',
+    UNRESOLVED: '',
   }[tip.status] ?? '';
 
   const delay = `${index * 60}ms`;

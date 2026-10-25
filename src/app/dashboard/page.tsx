@@ -99,7 +99,7 @@ export default async function DashboardPage() {
               </table>
             </div>
             <p className="text-[10px] text-[var(--chalk-dim)] mt-2">
-              Profit i ROI računaju ulog 1u na svaki riješen tiket (WIN = kvota − 1, LOSS = −1). VOID i PENDING se ne
+              Profit i ROI računaju ulog 1u na svaki riješen tiket (WIN = kvota − 1, LOSS = −1). VOID, NERJEŠIVO (rezultat nije pronađen ni nakon 7 dana) i PENDING se ne
               računaju. Mali uzorci (&lt; 30 tiketa) nisu statistički pouzdani.
             </p>
           </section>

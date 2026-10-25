@@ -98,10 +98,11 @@ export function evaluateSelection(input: EvalInput): SelectionStatus {
  */
 export function evaluateDouble(
   selectionStatuses: SelectionStatus[]
-): 'WIN' | 'LOSS' | 'PENDING' | 'VOID' {
+): 'WIN' | 'LOSS' | 'PENDING' | 'VOID' | 'UNRESOLVED' {
   if (selectionStatuses.some((s) => s === 'PENDING')) return 'PENDING';
+  if (selectionStatuses.some((s) => s === 'LOSS')) return 'LOSS'; // one lost leg decides, even if others are unknown
+  if (selectionStatuses.some((s) => s === 'UNRESOLVED')) return 'UNRESOLVED';
   if (selectionStatuses.every((s) => s === 'WIN')) return 'WIN';
-  if (selectionStatuses.some((s) => s === 'LOSS')) return 'LOSS';
   if (selectionStatuses.every((s) => s === 'VOID')) return 'VOID';
   return 'LOSS'; // Mixed win/void = LOSS in most bookmakers
 }

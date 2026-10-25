@@ -2,6 +2,7 @@
 // Run with: npm run resolve
 // Checks pending doubles and updates results
 
+import { giveUpOldPending } from '../src/lib/services/unresolvedService';
 import { withLossStreakAlert } from '../src/lib/services/streakAlertService';
 import { PrismaClient } from '@prisma/client';
 import { scrapeResultsFromDailyPage, scrapeMatchResult } from '../src/lib/scraper/betmines';
@@ -207,4 +208,4 @@ async function main() {
   }
 }
 
-withLossStreakAlert(main);
+withLossStreakAlert(async () => { await main(); await giveUpOldPending(); });

@@ -13,7 +13,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function FtCard({ tip, index }: Props) {
-  const cardClass = { WIN: 'card-win', LOSS: 'card-loss', PENDING: 'card-pending', VOID: '' }[tip.status] ?? '';
+  const cardClass = { WIN: 'card-win', LOSS: 'card-loss', PENDING: 'card-pending', VOID: '', UNRESOLVED: '' }[tip.status] ?? '';
   const delay = `${index * 60}ms`;
   const hasScore = tip.homeScore !== null && tip.awayScore !== null;
 
