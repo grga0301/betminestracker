@@ -34,9 +34,10 @@ Vercel only serves the UI and read APIs. **All scraping/resolving runs in GitHub
 
 
 ## Result resolution
-Cascade in `fetchScoreFromSportsDB` (`fstResultFetcher.ts`): TheSportsDB → Zulubet lists → ESPN (`soccer/all` + league codes; also yesterday's `all`) → SportAPI7 → SofaScore → API-Football → **web search** (`searchScoreFetcher.ts`) → Gemini grounded search.
+Cascade in `fetchScoreFromSportsDB` (`fstResultFetcher.ts`): TheSportsDB → Zulubet lists → ESPN (`soccer/all` + league codes; also yesterday's `all`) → **SportsAPIPro** → SportAPI7 → SofaScore → API-Football → **web search** (`searchScoreFetcher.ts`) → Gemini grounded search.
 - **TheSportsDB:** the old free key `3` was permanently disabled (403); use `123`. Rate limited (429 from GitHub IPs), so calls are throttled.
 - **ESPN:** valid codes are lowercase (`uefa.champions`, `uefa.europa`, `uefa.europa.conf`); `hrv.1` is invalid. `soccer/all?limit=500` covers most leagues.
+- **SportsAPIPro** (`sportsApiProFetcher.ts`, secret `SPORTSAPIPRO_KEY`, free plan 100 calls/day): `GET v2.football.sportsapipro.com/api/schedule/{UTC date}` returns the whole day (~350 matches incl. small leagues, `status.type` = finished). Day schedules are cached in table `ScheduleCache` (today's refreshed every 90 min, finished past days kept), max 3 calls per run; waits until kickoff+2h. Best source we have for lower leagues.
 - **API-Football:** account **suspended** (check dashboard.api-football.com); SportAPI7 404, SofaScore 403.
 - **Gemini grounded search (`googleSearch` tool) has no free quota on our key** (429 on every model; calls without tools work). So it is practically dead.
 - **Web search fallback:** Jina `s.jina.ai` (needs `JINA_API_KEY` in the workflow env) → a score is accepted only when ≥2 different sites state it for the right date (regex tier, or non-grounded Gemini reading the snippets, verified literally against the text). Same-day matches allowed 3 h after kickoff (`kickoffMsFrom` reads the clock as UTC on purpose). Accepted scores are logged with URLs in table `LlmScore` (`/api/llm-scores`).
@@ -57,7 +58,7 @@ Resolve workflows (`daily-resolve`, `-fst`, `-ft`, `daily-ext-tips`) run every 3
 - DB changes ship as hand-written SQL in `prisma/migrations/` and are applied by `prisma migrate deploy` in the workflows. Vercel deploys immediately on push, so after adding a column run `gh workflow run daily-ext-tips.yml` right away or the API errors until the migration applies.
 - When editing files with Python heredocs, `'\n'` inside a normal Python string becomes a real newline in TS source → syntax error. Use the Edit tool or raw strings.
 
-**Secrets present:** `DATABASE_URL`, `GEMINI_API_KEY`, `RAPIDAPI_KEY`, `API_FOOTBALL_KEY` (account suspended), `SCRAPEDO_TOKEN`, `JINA_API_KEY`, `TELEGRAM_BOT_TOKEN` (@BetaraTracker_bot), `TELEGRAM_CHAT_ID` (group), `FOREBET_PROXY_*` (unused), `FB_*` (unused). Pass `JINA_API_KEY`/Telegram vars in the workflow-level `env:` block, otherwise a step silently skips features.
+**Secrets present:** `DATABASE_URL`, `GEMINI_API_KEY`, `RAPIDAPI_KEY`, `API_FOOTBALL_KEY` (account suspended), `SCRAPEDO_TOKEN`, `JINA_API_KEY`, `SPORTSAPIPRO_KEY`, `TELEGRAM_BOT_TOKEN` (@BetaraTracker_bot), `TELEGRAM_CHAT_ID` (group), `FOREBET_PROXY_*` (unused), `FB_*` (unused). Pass `JINA_API_KEY`/Telegram vars in the workflow-level `env:` block, otherwise a step silently skips features.
 
 ## Decisions already made (don't redo)
 - **Removed:** Facebook "Tipoznalac" tickets (code gone; `FbTicket`/`FbSelection` tables intentionally kept so data isn't lost; schema comment says so). **Dropped:** Forebet.
