@@ -1,0 +1,21 @@
+name: Diagnose API-Football (one-off)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query API-Football
+        env:
+          K: ${{ secrets.API_FOOTBALL_KEY }}
+        run: |
+          echo "== status (plan / quota) =="
+          curl -s -H "x-apisports-key: $K" https://v3.football.api-sports.io/status | jq -c '{errors, plan: .response.subscription.plan, active: .response.subscription.active, end: .response.subscription.end, req: .response.requests}'
+          for d in 2026-10-24 2026-10-22 2026-10-10; do
+            echo "== fixtures $d =="
+            curl -s -H "x-apisports-key: $K" "https://v3.football.api-sports.io/fixtures?date=$d&status=FT-AET-PEN" | jq -c '{errors, results}'
+          done
+          echo "== fixtures by season/league sample =="
+          curl -s -H "x-apisports-key: $K" "https://v3.football.api-sports.io/fixtures?date=2026-10-24" | jq -c '{errors, results}'
