@@ -15,6 +15,7 @@ export const TELEGRAM_STREAK: Record<string, number> = {
   footyacca: 4,
   footballpark: 4,
   zulubet: 5,
+  'ft-double': 5,
 };
 
 type Streaks = Record<string, number>;

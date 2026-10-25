@@ -4,6 +4,7 @@ import { FA_CATEGORIES, scrapeFootyAccumulatorsCategory } from '../src/lib/scrap
 import { scrapeFootballParkToday } from '../src/lib/scraper/footballpark';
 import { scrapeZulubetToday } from '../src/lib/scraper/zulubet';
 import { scrapeFootballSuperToday } from '../src/lib/scraper/footballsuper';
+import { scrapeFreeTipsDoubleToday } from '../src/lib/scraper/freetipsdouble';
 import { kickoffMsFrom } from '../src/lib/services/fstResultFetcher';
 import { saveExtTips, dropRecentRepeats } from '../src/lib/services/extTipService';
 
@@ -25,6 +26,7 @@ const SOURCES: [string, () => Promise<ExtScrapedTip[]>][] = [
       return dropRecentRepeats(upcoming);
     },
   ],
+  ['FreeTips Daily Double', scrapeFreeTipsDoubleToday],
   ['Zulubet', scrapeZulubetToday],
 ];
 

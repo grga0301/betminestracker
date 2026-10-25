@@ -14,6 +14,7 @@ const EXT_LABELS: Record<string, string> = {
   FOOTYACCA_OVER25: 'FootyAcca Over 2.5',
   FOOTBALLPARK: 'FootballPark',
   FOOTBALLSUPER: 'FootballSuper',
+  FREETIPS_DOUBLE: 'FreeTips Daily Double',
   ZULUBET: 'Zulubet',
 };
 

@@ -4,8 +4,8 @@
 import { prisma } from '../db/prisma';
 import type { ExtLeg, ExtScrapedTip } from '../scraper/tiporacle';
 
-export type ExtSource = 'TIPORACLE' | 'FOOTYACCA' | 'FOOTYACCA_BTTS' | 'FOOTYACCA_OVER25' | 'FOOTBALLPARK' | 'FOOTBALLSUPER' | 'ZULUBET';
-export const EXT_SOURCES: ExtSource[] = ['TIPORACLE', 'FOOTYACCA', 'FOOTYACCA_BTTS', 'FOOTYACCA_OVER25', 'FOOTBALLPARK', 'FOOTBALLSUPER', 'ZULUBET'];
+export type ExtSource = 'TIPORACLE' | 'FOOTYACCA' | 'FOOTYACCA_BTTS' | 'FOOTYACCA_OVER25' | 'FOOTBALLPARK' | 'FOOTBALLSUPER' | 'FREETIPS_DOUBLE' | 'ZULUBET';
+export const EXT_SOURCES: ExtSource[] = ['TIPORACLE', 'FOOTYACCA', 'FOOTYACCA_BTTS', 'FOOTYACCA_OVER25', 'FOOTBALLPARK', 'FOOTBALLSUPER', 'FREETIPS_DOUBLE', 'ZULUBET'];
 
 export interface ExtTipRecord {
   id: number;

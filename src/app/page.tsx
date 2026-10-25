@@ -178,6 +178,12 @@ export default function HomePage() {
         />
 
         <ExtSection
+          source="FREETIPS_DOUBLE"
+          title="FreeTips.com · Daily Double"
+          blurb="Two picks per day as one ticket (odds around 3); tracked from 2026-10-25, no earlier history."
+        />
+
+        <ExtSection
           source="FOOTBALLSUPER"
           title="FootballSuper · Tip of the Day"
           blurb="One single pick per day with odds (around 1.8) from footballsuper.tips; tracked from 2026-10-25, no earlier history."
