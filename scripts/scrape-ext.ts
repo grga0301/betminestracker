@@ -3,7 +3,9 @@ import { scrapeTipOracleToday, type ExtScrapedTip } from '../src/lib/scraper/tip
 import { FA_CATEGORIES, scrapeFootyAccumulatorsCategory } from '../src/lib/scraper/footyaccumulators';
 import { scrapeFootballParkToday } from '../src/lib/scraper/footballpark';
 import { scrapeZulubetToday } from '../src/lib/scraper/zulubet';
-import { saveExtTips } from '../src/lib/services/extTipService';
+import { scrapeFootballSuperToday } from '../src/lib/scraper/footballsuper';
+import { kickoffMsFrom } from '../src/lib/services/fstResultFetcher';
+import { saveExtTips, dropRecentRepeats } from '../src/lib/services/extTipService';
 
 const SOURCES: [string, () => Promise<ExtScrapedTip[]>][] = [
   ['TipOracle', scrapeTipOracleToday],
@@ -11,6 +13,18 @@ const SOURCES: [string, () => Promise<ExtScrapedTip[]>][] = [
     (c): [string, () => Promise<ExtScrapedTip[]>] => [`FootyAccumulators/${c.path}`, () => scrapeFootyAccumulatorsCategory(c)]
   ),
   ['FootballPark', scrapeFootballParkToday],
+  [
+    'FootballSuper',
+    async () => {
+      // Store only picks whose match has not started yet (clock read as UTC: UK time, at most 1 h off).
+      const upcoming = (await scrapeFootballSuperToday()).filter((t) => {
+        const ko = kickoffMsFrom(t.date, t.kickoff);
+        if (ko !== undefined && ko <= Date.now()) console.log(`  (skipping ${t.homeTeam} vs ${t.awayTeam}: kickoff ${t.kickoff} has passed)`);
+        return ko === undefined || ko > Date.now();
+      });
+      return dropRecentRepeats(upcoming);
+    },
+  ],
   ['Zulubet', scrapeZulubetToday],
 ];
 

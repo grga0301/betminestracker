@@ -177,6 +177,12 @@ export default function HomePage() {
           blurb="One single banker pick per day (usually 1X2) with odds."
         />
 
+        <ExtSection
+          source="FOOTBALLSUPER"
+          title="FootballSuper · Tip of the Day"
+          blurb="One single pick per day with odds (around 1.8) from footballsuper.tips; tracked from 2026-10-25, no earlier history."
+        />
+
         {!loading && !error && doubles.length === 0 && (
           <div className="pb-12" />
         )}

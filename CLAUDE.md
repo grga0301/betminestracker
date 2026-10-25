@@ -22,6 +22,7 @@ Vercel only serves the UI and read APIs. **All scraping/resolving runs in GitHub
 | FootyAccumulators Bet of the Day | `ExtTip` `FOOTYACCA` | `scraper/footyaccumulators.ts` | reads `__NEXT_DATA__` JSON; single tip, may be combined market |
 | FootyAccumulators BTTS / Over 2.5 trebles | `FOOTYACCA_BTTS`, `FOOTYACCA_OVER25` | same | 3-leg tickets, `legs` JSON column, odds ~4–5 |
 | FootballPark Bet of the Day | `ExtTip` `FOOTBALLPARK` | `scraper/footballpark.ts` | jina fallback when GitHub IPs refused |
+| FootballSuper Tip of the Day | `ExtTip` `FOOTBALLSUPER` | `scraper/footballsuper.ts` | one pick/day with odds (~1.8), server-rendered HTML, direct fetch works; page has no date so it is stored under the fetch day, only if kickoff hasn't passed and the match wasn't stored in the last 2 days (`dropRecentRepeats`). Tracked from 2026-10-25, no history; no Telegram alert configured. |
 | Zulubet (picks @1.70–2.20) | `ExtTip` `ZULUBET` | `scraper/zulubet.ts` | bulk 1X2 site → rule picks top-3/day; history pages `tips-DD-MM-YYYY.html` |
 
 `ExtTip` (one table for all newer sources): unique `(source,date,rank)`, `legs` = JSON array for multi-match tickets, `status` PENDING/WIN/LOSS. Always add a new source in: `ExtSourceKey` (`tiporacle.ts`), `ExtSource`/`EXT_SOURCES` (`extTipService.ts`), `scripts/scrape-ext.ts`, `src/app/page.tsx` (an `<ExtSection>`), and `dashboardService.ts`.

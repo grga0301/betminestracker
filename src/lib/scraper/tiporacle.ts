@@ -9,6 +9,7 @@ export type ExtSourceKey =
   | 'FOOTYACCA_BTTS'
   | 'FOOTYACCA_OVER25'
   | 'FOOTBALLPARK'
+  | 'FOOTBALLSUPER'
   | 'ZULUBET';
 
 /** One match inside a multi-match ticket. */

@@ -4,8 +4,8 @@
 import { prisma } from '../db/prisma';
 import type { ExtLeg, ExtScrapedTip } from '../scraper/tiporacle';
 
-export type ExtSource = 'TIPORACLE' | 'FOOTYACCA' | 'FOOTYACCA_BTTS' | 'FOOTYACCA_OVER25' | 'FOOTBALLPARK' | 'ZULUBET';
-export const EXT_SOURCES: ExtSource[] = ['TIPORACLE', 'FOOTYACCA', 'FOOTYACCA_BTTS', 'FOOTYACCA_OVER25', 'FOOTBALLPARK', 'ZULUBET'];
+export type ExtSource = 'TIPORACLE' | 'FOOTYACCA' | 'FOOTYACCA_BTTS' | 'FOOTYACCA_OVER25' | 'FOOTBALLPARK' | 'FOOTBALLSUPER' | 'ZULUBET';
+export const EXT_SOURCES: ExtSource[] = ['TIPORACLE', 'FOOTYACCA', 'FOOTYACCA_BTTS', 'FOOTYACCA_OVER25', 'FOOTBALLPARK', 'FOOTBALLSUPER', 'ZULUBET'];
 
 export interface ExtTipRecord {
   id: number;
@@ -143,4 +143,24 @@ export async function findNewExtTips<T extends { source: string; date: string; r
   });
   const have = new Set(existing.map((e) => `${e.source}|${e.date}|${e.rank}`));
   return tips.filter((t) => !have.has(`${t.source}|${t.date}|${t.rank}`));
+}
+
+/**
+ * Drops tips whose match (same source, same teams) is already stored within the last `days` days. For sources that
+ * publish no date, this stops a stale pick that is still on the page from being stored again under a new date.
+ */
+export async function dropRecentRepeats<T extends { source: string; date: string; homeTeam: string; awayTeam: string }>(
+  tips: T[],
+  days = 2
+): Promise<T[]> {
+  const out: T[] = [];
+  for (const t of tips) {
+    const since = new Date(Date.parse(t.date) - days * 864e5).toISOString().slice(0, 10);
+    const repeat = await prisma.extTip.findFirst({
+      where: { source: t.source, homeTeam: t.homeTeam, awayTeam: t.awayTeam, date: { gte: since, lt: t.date } },
+    });
+    if (!repeat) out.push(t);
+    else console.log(`  (skipping ${t.homeTeam} vs ${t.awayTeam}: already stored on ${repeat.date})`);
+  }
+  return out;
 }
