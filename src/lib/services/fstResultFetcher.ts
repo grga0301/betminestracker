@@ -100,6 +100,15 @@ function findInSportsDBEvents(events: any[], homeTeam: string, awayTeam: string)
 // TheSportsDB's old free key "3" was permanently disabled (403); "123" is the current public test key.
 const SPORTSDB_KEY = '123';
 
+// The public key is rate limited (~30 requests/minute, Cloudflare 1015 beyond that) — space the calls out.
+let lastSportsDbCall = 0;
+async function sportsDbJson(url: string): Promise<any> {
+  const wait = lastSportsDbCall + 2100 - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastSportsDbCall = Date.now();
+  return fetchJson(url);
+}
+
 /** Query strings for searchevents: full names, filler words dropped, and first significant word only. */
 function sportsDbQueries(homeTeam: string, awayTeam: string): string[] {
   const first = (n: string) => nameTokens(n)[0] ?? n;
@@ -119,7 +128,7 @@ function sportsDbQueries(homeTeam: string, awayTeam: string): string[] {
 
 async function fetchFromSportsDB(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
   const base = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}`;
-  const dayJson = await fetchJson(`${base}/eventsday.php?d=${date}&s=Soccer`);
+  const dayJson = await sportsDbJson(`${base}/eventsday.php?d=${date}&s=Soccer`);
   if (dayJson) {
     const found = findInSportsDBEvents(dayJson.events ?? [], homeTeam, awayTeam);
     if (found) return found;
@@ -128,7 +137,7 @@ async function fetchFromSportsDB(homeTeam: string, awayTeam: string, date: strin
   // Some sources date a tip one day after the match — accept the previous day too.
   const prev = new Date(Date.parse(date) - 864e5).toISOString().slice(0, 10);
   for (const query of sportsDbQueries(homeTeam, awayTeam)) {
-    const json = await fetchJson(`${base}/searchevents.php?e=${query}`);
+    const json = await sportsDbJson(`${base}/searchevents.php?e=${query}`);
     if (!json) continue;
     for (const day of [date, prev]) {
       const found = findInSportsDBEvents((json.event ?? []).filter((e: any) => e.dateEvent === day), homeTeam, awayTeam);
