@@ -4,6 +4,12 @@
 // Compact names that sources spell very differently.
 const TEAM_ALIASES: Record<string, string> = {
   hearts: 'heartofmidlothian',
+  psg: 'parissaintgermain',
+  psvii: 'jongpsv',
+  psv2: 'jongpsv',
+  bayernmunchen: 'bayernmunich',
+  manutd: 'manchesterunited',
+  mancity: 'manchestercity',
   spurs: 'tottenhamhotspur',
   wolves: 'wolverhamptonwanderers',
   inter: 'internazionale',
@@ -13,13 +19,17 @@ const TEAM_ALIASES: Record<string, string> = {
 // Club-name filler words that differ between sources ("Celta de Vigo" vs "Celta Vigo").
 const TEAM_STOPWORDS = new Set(['fc', 'cf', 'afc', 'sc', 'ac', 'as', 'fk', 'sk', 'cd', 'ud', 'rc', 'de', 'of', 'the', 'club']);
 
+function stripMarks(name: string): string {
+  return name.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 function normalize(name: string): string {
-  const compact = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const compact = stripMarks(name).toLowerCase().replace(/[^a-z0-9]/g, '');
   return TEAM_ALIASES[compact] ?? compact;
 }
 
 function nameTokens(name: string): string[] {
-  return name
+  return stripMarks(name)
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter((t) => t && !TEAM_STOPWORDS.has(t));
@@ -118,10 +128,10 @@ const ESPN_LEAGUES = [
   'uefa.champions', 'uefa.europa', 'uefa.europa.conf',
 ];
 
-async function fetchFromESPN(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
+async function fetchFromESPNLeagues(homeTeam: string, awayTeam: string, date: string, leagues: string[]): Promise<MatchScore | null> {
   const d = date.replace(/-/g, '');
   const results = await Promise.allSettled(
-    ESPN_LEAGUES.map((league) =>
+    leagues.map((league) =>
       fetchJson(
         `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${d}&limit=500`,
         7_000
@@ -211,6 +221,14 @@ async function fetchFromSportApi7(homeTeam: string, awayTeam: string, date: stri
 
 // ── API-Football (api-sports.io) ──────────────────────────────────────────────
 // 100 free requests/day — use as fallback only
+
+async function fetchFromESPN(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
+  const found = await fetchFromESPNLeagues(homeTeam, awayTeam, date, ESPN_LEAGUES);
+  if (found) return found;
+  // Some sources date a tip one day after the match was played (scraped late) — look at the day before too.
+  const prev = new Date(Date.parse(date) - 864e5).toISOString().slice(0, 10);
+  return fetchFromESPNLeagues(homeTeam, awayTeam, prev, ['all']);
+}
 
 async function fetchFromApiFootball(homeTeam: string, awayTeam: string, date: string): Promise<MatchScore | null> {
   const apiKey = process.env.API_FOOTBALL_KEY;
