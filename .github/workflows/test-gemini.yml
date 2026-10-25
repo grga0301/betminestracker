@@ -1,4 +1,4 @@
-name: Test Gemini quota (one-off)
+name: Test Jina search (one-off)
 
 on:
   workflow_dispatch:
@@ -7,14 +7,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe models with and without search grounding
+      - name: Jina search for match results
         env:
-          K: ${{ secrets.GEMINI_API_KEY }}
+          J: ${{ secrets.JINA_API_KEY }}
         run: |
-          for m in gemini-flash-lite-latest gemini-flash-latest gemini-2.5-flash gemini-2.5-flash-lite gemini-3-flash gemini-3.1-flash-lite; do
-            for tools in none search; do
-              if [ $tools = search ]; then T='"tools":[{"googleSearch":{}}],'; else T=''; fi
-              code=$(curl -s -o /tmp/o -w '%{http_code}' -m 60 -X POST "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent?key=$K" -H 'Content-Type: application/json' -d "{$T\"contents\":[{\"parts\":[{\"text\":\"Final score of Raufoss vs Ranheim on 2026-10-24? Reply H-A\"}]}]}")
-              printf '%-28s %-7s %s  %s\n' "$m" "$tools" "$code" "$(head -c 160 /tmp/o | tr '\n' ' ' | sed 's/  */ /g')"
-            done
+          for q in "Raufoss Ranheim 24 October 2026 result" "Shanghai Port Chengdu Rongcheng 18 October 2026 result" "Farnham Town Braintree Town 24 October 2026 result"; do
+            echo "=== $q"
+            curl -s -m 90 -H "Authorization: Bearer $J" -H "Accept: application/json" "https://s.jina.ai/$(printf '%s' "$q" | jq -sRr @uri)" -o /tmp/s.json -w 'http %{http_code}  %{size_download}B\n'
+            jq -r '.data[:5][]? | "- " + .url + "\n    " + ((.description // .content // "") | gsub("\s+";" ") | .[0:220])' /tmp/s.json 2>/dev/null || head -c 300 /tmp/s.json
           done
