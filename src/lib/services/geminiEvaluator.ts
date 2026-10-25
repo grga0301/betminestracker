@@ -91,7 +91,8 @@ async function askGemini(model: string, prompt: string): Promise<Vote | 'UNKNOWN
       }
     );
     if (!res.ok) {
-      console.log(`  [Gemini] ${model}: HTTP ${res.status}`);
+      const body = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+      console.log(`  [Gemini] ${model}: HTTP ${res.status} ${body}`);
       if (res.status === 429) quotaHit = true;
       return null;
     }
