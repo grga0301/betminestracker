@@ -1,4 +1,4 @@
-name: Diagnose API-Football (one-off)
+name: Diagnose result sources (one-off)
 
 on:
   workflow_dispatch:
@@ -7,10 +7,17 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Query API-Football
+      - name: Probe sources from a GitHub runner
         env:
-          K: ${{ secrets.API_FOOTBALL_KEY }}
+          JINA: ${{ secrets.JINA_API_KEY }}
         run: |
-          echo "key length: ${#K}"
-          curl -s -H "x-apisports-key: $K" https://v3.football.api-sports.io/status | jq -c '{errors, results, response}' | cut -c1-400
-          curl -s -H "x-apisports-key: $K" "https://v3.football.api-sports.io/fixtures?date=2026-10-24&status=FT-AET-PEN" | jq -c '{errors, results}' | cut -c1-400
+          probe() { printf '%-34s' "$1"; curl -s -o /tmp/o -w '%{http_code} %{size_download}B' -m 40 "${@:2}"; echo "  $(head -c 110 /tmp/o | tr '\n' ' ')"; }
+          probe "thesportsdb direct" "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=2026-10-24&s=Soccer"
+          probe "thesportsdb via jina" -H "Authorization: Bearer $JINA" -H "Accept: application/json" "https://r.jina.ai/https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=2026-10-24&s=Soccer"
+          probe "espn all (ref)" "https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?dates=20261024&limit=500"
+          probe "sofascore scheduled" -H "User-Agent: Mozilla/5.0" "https://api.sofascore.com/api/v1/sport/football/scheduled-events/2026-10-24"
+          probe "sofascore via jina" -H "Authorization: Bearer $JINA" "https://r.jina.ai/https://api.sofascore.com/api/v1/sport/football/scheduled-events/2026-10-24"
+          probe "fotmob via jina" -H "Authorization: Bearer $JINA" "https://r.jina.ai/https://www.fotmob.com/api/matches?date=20261024"
+          probe "flashscore via jina" -H "Authorization: Bearer $JINA" "https://r.jina.ai/https://www.flashscore.com/football/norway/obos-ligaen/results/"
+          probe "livescore via jina" -H "Authorization: Bearer $JINA" "https://r.jina.ai/https://www.livescore.com/en/football/2026-10-24/"
+          probe "openligadb (ref)" "https://api.openligadb.de/getmatchdata/bl1"
