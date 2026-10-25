@@ -1,4 +1,4 @@
-name: Test Gemini score fallback (one-off)
+name: Test Gemini quota (one-off)
 
 on:
   workflow_dispatch:
@@ -7,17 +7,14 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
+      - name: Probe models with and without search grounding
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - run: npx tsx scripts/test-gemini-score.ts
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          K: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          for m in gemini-flash-lite-latest gemini-flash-latest gemini-2.5-flash gemini-2.5-flash-lite gemini-3-flash gemini-3.1-flash-lite; do
+            for tools in none search; do
+              if [ $tools = search ]; then T='"tools":[{"googleSearch":{}}],'; else T=''; fi
+              code=$(curl -s -o /tmp/o -w '%{http_code}' -m 60 -X POST "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent?key=$K" -H 'Content-Type: application/json' -d "{$T\"contents\":[{\"parts\":[{\"text\":\"Final score of Raufoss vs Ranheim on 2026-10-24? Reply H-A\"}]}]}")
+              printf '%-28s %-7s %s  %s\n' "$m" "$tools" "$code" "$(head -c 160 /tmp/o | tr '\n' ' ' | sed 's/  */ /g')"
+            done
+          done
