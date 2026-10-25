@@ -9,7 +9,7 @@ import { evaluateExtMarket } from './extTipEvaluator';
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-flash-lite-latest';
 
 // Free-tier quota guard: at most N grounded searches per process, and stop for good after the first 429.
-const MAX_SEARCHES_PER_RUN = Number(process.env.GEMINI_MAX_SEARCHES ?? 5);
+const MAX_SEARCHES_PER_RUN = Number(process.env.GEMINI_MAX_SEARCHES ?? 10);
 let searches = 0;
 let quotaHit = false;
 
@@ -61,52 +61,128 @@ export async function evaluateWithGemini(
   return null; // unclear answer — don't guess
 }
 
-// Uses Gemini with Google Search grounding to find a match result when all other sources fail.
-export async function fetchScoreWithGemini(
-  homeTeam: string,
-  awayTeam: string,
-  date: string,
-): Promise<{ homeScore: number; awayScore: number } | null> {
+// ── Gemini web-search fallback for scores ────────────────────────────────────
+// Last resort when every API/scraper source fails. An LLM can hallucinate a score, so a result is accepted
+// only when TWO independent votes (different prompt wording and model) return the same score, both say the
+// match is finished, and both were backed by real Google Search results. Anything else stays PENDING.
+// Accepted scores are written to the LlmScore table (with source URLs) so they can be reviewed.
+
+const VOTE_MODELS = (process.env.GEMINI_VOTE_MODELS ?? `${GEMINI_MODEL},gemini-flash-latest`).split(',').map((m) => m.trim());
+
+interface Vote {
+  homeScore: number;
+  awayScore: number;
+  urls: string[];
+}
+
+async function askGemini(model: string, prompt: string): Promise<Vote | 'UNKNOWN' | null> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || quotaHit || searches >= MAX_SEARCHES_PER_RUN) return null;
-  searches++;
-
-  const prompt =
-    `What was the final score of the football match between ${homeTeam} (home) and ${awayTeam} (away) played on ${date}?\n` +
-    `Reply with ONLY the score in format "H-A" (e.g. "2-1"). ` +
-    `If the match is not finished or you cannot find the result, reply with "UNKNOWN".`;
-
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ googleSearch: {} }],
-          generationConfig: { temperature: 0, maxOutputTokens: 256 },
+          generationConfig: { temperature: 0, maxOutputTokens: 400 },
         }),
       }
     );
-
     if (!res.ok) {
-      console.log(`  [Gemini] HTTP error: ${res.status}`);
+      console.log(`  [Gemini] ${model}: HTTP ${res.status}`);
       if (res.status === 429) quotaHit = true;
       return null;
     }
     const json = await res.json();
-    const answer = (json.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
-    console.log(`  [Gemini] Raw answer: "${answer}"`);
+    const cand = json.candidates?.[0];
+    const answer: string = (cand?.content?.parts ?? []).map((p: any) => p.text ?? '').join('').trim();
+    console.log(`  [Gemini] ${model}: ${answer.replace(/\s+/g, ' ').slice(0, 200)}`);
 
-    const match = answer.match(/\b(\d+)\s*[-–]\s*(\d+)\b/);
-    if (!match) return null;
-
-    return { homeScore: parseInt(match[1]), awayScore: parseInt(match[2]) };
+    const urls: string[] = (cand?.groundingMetadata?.groundingChunks ?? [])
+      .map((c: any) => c.web?.uri)
+      .filter((u: unknown): u is string => typeof u === 'string');
+    const finished = /FINISHED:\s*yes/i.test(answer);
+    const m = answer.match(/SCORE:\s*(\d{1,2})\s*[-–]\s*(\d{1,2})/i);
+    if (/SCORE:\s*UNKNOWN/i.test(answer)) return 'UNKNOWN';
+    if (!m || !finished) return 'UNKNOWN';
+    if (urls.length === 0) {
+      console.log(`  [Gemini] ${model}: answer without any search source — ignored`);
+      return 'UNKNOWN';
+    }
+    return { homeScore: parseInt(m[1], 10), awayScore: parseInt(m[2], 10), urls };
   } catch (e) {
-    console.log(`  [Gemini] Exception: ${e}`);
+    console.log(`  [Gemini] ${model}: exception ${e}`);
     return null;
   }
+}
+
+export async function fetchScoreWithGemini(
+  homeTeam: string,
+  awayTeam: string,
+  date: string,
+): Promise<{ homeScore: number; awayScore: number } | null> {
+  if (!process.env.GEMINI_API_KEY || quotaHit) return null;
+  // Never ask about matches that may still be running or only just ended.
+  const today = new Date().toISOString().slice(0, 10);
+  if (date >= today) return null;
+  if (searches + 2 > MAX_SEARCHES_PER_RUN) return null;
+
+  const ask = (i: number) =>
+    i === 0
+      ? `Use Google Search. What was the final score of the football match ${homeTeam} (home) vs ${awayTeam} (away), played on ${date} (the date may be off by one day)?
+` +
+        `Score = goals after 90 minutes plus extra time, NOT counting a penalty shootout. Give the home team's goals first.
+` +
+        `Reply in exactly this format:
+SCORE: H-A
+FINISHED: yes or no
+SOURCE: the page you used
+` +
+        `If you cannot find this exact match with certainty, reply only: SCORE: UNKNOWN`
+      : `Search the web for the result of ${homeTeam} against ${awayTeam} on or around ${date}. ${homeTeam} is the HOME side.
+` +
+        `I need the full-time result (including extra time, excluding penalties). Do not guess and do not use a different season or a different pairing of clubs.
+` +
+        `Answer strictly as:
+SCORE: <home goals>-<away goals>
+FINISHED: yes/no
+SOURCE: <url>
+` +
+        `or, if unsure, just: SCORE: UNKNOWN`;
+
+  searches++;
+  const first = await askGemini(VOTE_MODELS[0], ask(0));
+  if (!first || first === 'UNKNOWN') return null; // nothing found (or API trouble) — no second call needed
+  searches++;
+  const second = await askGemini(VOTE_MODELS[1] ?? VOTE_MODELS[0], ask(1));
+  if (!second || second === 'UNKNOWN') return null;
+
+  if (first.homeScore !== second.homeScore || first.awayScore !== second.awayScore) {
+    console.log(`  [Gemini] votes disagree (${first.homeScore}-${first.awayScore} vs ${second.homeScore}-${second.awayScore}) — keeping PENDING`);
+    return null;
+  }
+  if (first.homeScore > 15 || first.awayScore > 15) return null; // implausible
+
+  try {
+    const { prisma } = await import('../db/prisma');
+    await prisma.llmScore.create({
+      data: {
+        homeTeam,
+        awayTeam,
+        date,
+        homeScore: first.homeScore,
+        awayScore: first.awayScore,
+        sources: JSON.stringify([...new Set([...first.urls, ...second.urls])].slice(0, 6)),
+        models: JSON.stringify([VOTE_MODELS[0], VOTE_MODELS[1] ?? VOTE_MODELS[0]]),
+      },
+    });
+  } catch (e) {
+    console.log(`  [Gemini] could not write audit row: ${e instanceof Error ? e.message : e}`);
+  }
+  console.log(`  [Gemini] 2/2 votes agree: ${first.homeScore}-${first.awayScore}`);
+  return { homeScore: first.homeScore, awayScore: first.awayScore };
 }
 
 // Tries local rule-based evaluation first; falls back to Gemini only for unknown markets.

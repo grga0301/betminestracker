@@ -119,3 +119,18 @@ model ExtTip {
   @@unique([source, date, rank])
   @@index([source, status])
 }
+
+// Audit log of match scores found by the Gemini web-search fallback (two agreeing votes + source URLs).
+model LlmScore {
+  id         Int      @id @default(autoincrement())
+  homeTeam   String
+  awayTeam   String
+  date       String
+  homeScore  Int
+  awayScore  Int
+  sources    String   // JSON array of source URLs reported by the search grounding
+  models     String   // JSON array of the models that voted
+  createdAt  DateTime @default(now())
+
+  @@index([date])
+}
