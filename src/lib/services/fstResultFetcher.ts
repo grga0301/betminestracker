@@ -17,7 +17,7 @@ const TEAM_ALIASES: Record<string, string> = {
 };
 
 // Club-name filler words that differ between sources ("Celta de Vigo" vs "Celta Vigo").
-const TEAM_STOPWORDS = new Set(['fc', 'cf', 'afc', 'sc', 'ac', 'as', 'fk', 'sk', 'cd', 'ud', 'rc', 'de', 'of', 'the', 'club']);
+const TEAM_STOPWORDS = new Set(['fc', 'cf', 'afc', 'sc', 'fk', 'sk', 'cd', 'ud', 'rc', 'de', 'of', 'the', 'club']);
 
 function stripMarks(name: string): string {
   return name.normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -39,11 +39,31 @@ export function teamsMatch(a: string, b: string): boolean {
   const na = normalize(a);
   const nb = normalize(b);
   if (na === nb || na.includes(nb) || nb.includes(na)) return true;
-  // Token fallback: every meaningful word of the shorter name appears in the longer one.
+  // Token fallback: every meaningful word of the shorter name matches a word of the longer one.
   const ta = nameTokens(a);
   const tb = nameTokens(b);
   const [small, big] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
-  return small.length > 0 && small.every((t) => big.includes(t));
+  return small.length > 0 && small.every((t) => big.some((u) => tokenMatch(t, u)));
+}
+
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+/** Two words of a club name that plausibly denote the same word: equal, initial ("O." / Oriente), prefix ("Uni" / Universitario), or a small spelling difference. */
+function tokenMatch(x: string, y: string): boolean {
+  if (x === y) return true;
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+  if (short.length === 1) return long.startsWith(short);
+  if (short.length >= 3 && long.startsWith(short)) return true;
+  return short.length >= 6 && Math.abs(x.length - y.length) <= 1 && editDistance(x, y) <= 2;
 }
 
 function isFinished(strStatus: string): boolean {
@@ -362,6 +382,14 @@ export async function fetchScoreFromSportsDB(
     const sap = await fetchScoreFromSportsApiPro(homeTeam, awayTeam, date, kickoffMs);
     if (sap) { console.log(`  [Fetch] SportsAPIPro: ${sap.homeScore}-${sap.awayScore}`); return sap; }
     console.log(`  [Fetch] SportsAPIPro: no result`);
+  }
+
+  if (process.env.LIVEFOOTBALLAPI_KEY) {
+    console.log(`  [Fetch] LiveFootballAPI...`);
+    const { fetchScoreFromLiveFootballApi } = await import('./liveFootballApiFetcher');
+    const lfa = await fetchScoreFromLiveFootballApi(homeTeam, awayTeam, date, kickoffMs);
+    if (lfa) { console.log(`  [Fetch] LiveFootballAPI: ${lfa.homeScore}-${lfa.awayScore}`); return lfa; }
+    console.log(`  [Fetch] LiveFootballAPI: no result`);
   }
 
   console.log(`  [Fetch] SportAPI7 (RapidAPI)...`);
