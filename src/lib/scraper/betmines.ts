@@ -1,7 +1,7 @@
 // src/lib/scraper/betmines.ts
 // Scrapes today's football double from https://betmines.com/daily-bets-football
 
-import { chromium, Browser } from 'playwright';
+import { chromium, Browser, Page } from 'playwright';
 import type { ScrapedDouble, ScrapedSelection } from '../types';
 
 const BETMINES_URL = 'https://betmines.com/daily-bets-football';
@@ -154,10 +154,126 @@ export async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
   throw new Error(`All fetch strategies failed — ${errors.join(' | ')}`.slice(0, 1500));
 }
 
+export type DailyKind = 'double' | 'risk';
+
 /**
- * Main scraper — extracts the "Double" section from betmines.com/daily-bets-football.
+ * Extracts one ticket from the rendered page: the "Double" or the "Risk" section (same markup: a card with an H2,
+ * then one <ul> per match and a "Total odd" row).
  */
-export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
+async function extractSection(page: Page, kind: DailyKind): Promise<ScrapedDouble | null> {
+  const raw = await page.evaluate((prefix: string) => {
+    // 1. Find the section via its H2 label
+    const heading = Array.from(document.querySelectorAll('h2, h3'))
+      .find((h) => h.textContent?.trim().toLowerCase().startsWith(prefix));
+
+    // Fallback (Double only): find the container that holds exactly 2 fixture ULs
+    let container: Element | null = heading?.parentElement ?? null;
+    if (!container && prefix === 'double') {
+      const allFixtures = Array.from(document.querySelectorAll('.daily-bet-fixture-content'));
+      if (allFixtures.length >= 2) {
+        const parent = allFixtures[0].closest('section, div, article');
+        if (parent) container = parent;
+      }
+    }
+    if (!container) return null;
+
+    // 2. Collect total odds
+    const totalOddsUL = Array.from(container.querySelectorAll(':scope > ul'))
+      .find((ul) => ul.textContent?.includes('Total odd'));
+    const totalOddsText = totalOddsUL?.textContent || '';
+    const totalOddsMatch = totalOddsText.match(/([\d]+\.[\d]+)\s*$/);
+    const totalOdds = totalOddsMatch ? parseFloat(totalOddsMatch[1]) : 0;
+
+    // 3. Collect each match UL (those containing a fixture)
+    const matchULs = Array.from(container.querySelectorAll(':scope > ul'))
+      .filter((ul) => ul.querySelector('.daily-bet-fixture-content'));
+
+    const selections = matchULs.flatMap((ul) => {
+      // A <ul> holds a league header and one or more fixture rows
+      const leagueEl = ul.querySelector('.daily-bet-league-header');
+      const league = (leagueEl?.textContent || '').trim().replace(/\s+/g, ' ');
+
+      return Array.from(ul.querySelectorAll('.daily-bet-fixture-content')).map((fixture) => {
+        const teamImgs = Array.from(fixture.querySelectorAll('img[alt^="Logo of"]'));
+        const homeTeam = (teamImgs[0]?.getAttribute('alt') || '').replace('Logo of ', '').trim();
+        const awayTeam = (teamImgs[1]?.getAttribute('alt') || '').replace('Logo of ', '').trim();
+        if (!homeTeam || !awayTeam) return null;
+
+        // Kickoff time from the parent fixture-row
+        const fixtureRow = fixture.closest('.daily-bet-fixture-row');
+        const rowText = (fixtureRow?.textContent || '').trim();
+        const timeMatch = rowText.match(/^(\d{1,2}:\d{2})/);
+        const kickoffRaw = timeMatch ? timeMatch[1] : '';
+
+        // Market + pick + odd from the fixture text
+        const lines = (fixture.textContent || '')
+          .trim()
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l && l !== homeTeam && l !== awayTeam);
+
+        let odd = 1.5;
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const n = parseFloat(lines[i]);
+          if (!isNaN(n) && lines[i].includes('.') && n >= 1.0 && n <= 50) {
+            odd = n;
+            lines.splice(i, 1);
+            break;
+          }
+        }
+
+        const filtered = lines.filter((l) => !/^\d+\s+\d+$/.test(l)); // skip score lines like "4 0"
+        const marketKeywords = /btts|both teams|number of goals|1x2|double chance|handicap|over|under/i;
+        const marketIdx = filtered.findIndex((l) => marketKeywords.test(l));
+        const marketLabel = marketIdx >= 0 ? filtered[marketIdx] : '';
+        const pick = marketIdx >= 0 && filtered[marketIdx + 1] ? filtered[marketIdx + 1] : '';
+
+        return { homeTeam, awayTeam, league, kickoffRaw, marketLabel, pick, odd };
+      });
+    }).filter(Boolean) as Array<{
+      homeTeam: string; awayTeam: string; league: string;
+      kickoffRaw: string; marketLabel: string; pick: string; odd: number;
+    }>;
+
+    return { selections, totalOdds };
+  }, kind);
+
+  // Never fabricate data: a missing ticket must fail loudly instead of saving a fake one.
+  if (!raw || raw.selections.length === 0) {
+    console.error(`[Scraper] ${kind} section not found on page (layout changed?). Nothing saved.`);
+    return null;
+  }
+  if (raw.selections.length < 2) {
+    console.error(`[Scraper] Only ${raw.selections.length} selection(s) found in ${kind}. Expected at least 2. Nothing saved.`);
+    return null;
+  }
+
+  let totalOdds = raw.totalOdds;
+  const selections: ScrapedSelection[] = raw.selections.map((s) => {
+    const { market, line } = resolveMarket(s.marketLabel, s.pick);
+    return {
+      homeTeam: s.homeTeam,
+      awayTeam: s.awayTeam,
+      market,
+      line,
+      odd: s.odd,
+      league: s.league,
+      country: extractCountry(s.league),
+      kickoff: s.kickoffRaw ? parseKickoffISO(s.kickoffRaw) : new Date().toISOString(),
+    };
+  });
+  if (!totalOdds || totalOdds < 1) totalOdds = selections.reduce((acc, s) => acc * s.odd, 1);
+
+  console.log(`[Scraper] Found ${kind}: ${selections.map((s) => `${s.homeTeam} vs ${s.awayTeam} (${s.market} @ ${s.odd})`).join(', ')}`);
+  console.log(`[Scraper] ${kind} total odds: ${totalOdds}`);
+  return { date: getTodayString(), totalOdds, selections };
+}
+
+/**
+ * Main scraper — loads betmines.com/daily-bets-football ONCE and extracts both tickets of the day:
+ * the "Double" and the "Risk" bet (one fetch = one Scrape.do call).
+ */
+export async function scrapeBetMinesDaily(): Promise<{ double: ScrapedDouble | null; risk: ScrapedDouble | null }> {
   let browser: Browser | null = null;
 
   try {
@@ -177,7 +293,7 @@ export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
     if (process.env.SCRAPEDO_TOKEN) {
       // betmines.com sits behind a Cloudflare managed challenge that automated browsers cannot pass
       // (since 2026-10-04). A scraping API solves it and returns the rendered DOM; we load that HTML
-      // into a network-less page so the extraction code below stays unchanged.
+      // into a network-less page so the extraction code stays unchanged.
       const html = await fetchBetMinesViaScrapeDo(process.env.SCRAPEDO_TOKEN);
       await page.route('**/*', (route) => route.abort());
       await page.setContent(html, { waitUntil: 'domcontentloaded' });
@@ -192,140 +308,23 @@ export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
     );
     console.log(`[Scraper] H2/H3 headings found: ${JSON.stringify(h2Texts)}`);
 
-    const raw = await page.evaluate(() => {
-      // ── 1. Find the "Double" section via its H2 label ──────────────────────
-      const doubleH2 = Array.from(document.querySelectorAll('h2, h3'))
-        .find((h) => h.textContent?.trim().toLowerCase().startsWith('double'));
-
-      // Fallback: find the container that holds exactly 2 fixture ULs (= a double)
-      let container: Element | null = doubleH2?.parentElement ?? null;
-      if (!container) {
-        const allFixtures = Array.from(document.querySelectorAll('.daily-bet-fixture-content'));
-        if (allFixtures.length >= 2) {
-          // Walk up to find a common ancestor that wraps exactly 2 fixtures
-          const parent = allFixtures[0].closest('section, div, article');
-          if (parent) container = parent;
-        }
-      }
-      if (!container) return null;
-
-      // ── 2. Collect total odds ───────────────────────────────────────────────
-      const totalOddsUL = Array.from(container.querySelectorAll(':scope > ul'))
-        .find((ul) => ul.textContent?.includes('Total odd'));
-      const totalOddsText = totalOddsUL?.textContent || '';
-      const totalOddsMatch = totalOddsText.match(/([\d]+\.[\d]+)\s*$/);
-      const totalOdds = totalOddsMatch ? parseFloat(totalOddsMatch[1]) : 0;
-
-      // ── 3. Collect each match UL (those containing a fixture) ──────────────
-      const matchULs = Array.from(container.querySelectorAll(':scope > ul'))
-        .filter((ul) => ul.querySelector('.daily-bet-fixture-content'));
-
-      const selections = matchULs.map((ul) => {
-        // League name
-        const leagueEl = ul.querySelector('.daily-bet-league-header');
-        const league = (leagueEl?.textContent || '').trim().replace(/\s+/g, ' ');
-
-        // Fixture element
-        const fixture = ul.querySelector('.daily-bet-fixture-content') as HTMLElement | null;
-        if (!fixture) return null;
-
-        // ── Team names: use img alt attributes (most reliable) ──
-        const teamImgs = Array.from(fixture.querySelectorAll('img[alt^="Logo of"]'));
-        const homeTeam = (teamImgs[0]?.getAttribute('alt') || '').replace('Logo of ', '').trim();
-        const awayTeam = (teamImgs[1]?.getAttribute('alt') || '').replace('Logo of ', '').trim();
-
-        if (!homeTeam || !awayTeam) return null;
-
-        // ── Kickoff time from the parent fixture-row ──
-        const fixtureRow = fixture.closest('.daily-bet-fixture-row');
-        const rowText = (fixtureRow?.textContent || '').trim();
-        const timeMatch = rowText.match(/^(\d{1,2}:\d{2})/);
-        const kickoffRaw = timeMatch ? timeMatch[1] : '';
-
-        // ── Parse market + pick + odd from fixture text ──
-        const fixtureText = (fixture.textContent || '').trim();
-        // Get clean lines, removing team names and whitespace
-        const lines = fixtureText
-          .split('\n')
-          .map((l) => l.trim())
-          .filter((l) => l && l !== homeTeam && l !== awayTeam);
-
-        // Odd: last line that looks like a float (e.g., "1.44")
-        let odd = 1.5;
-        for (let i = lines.length - 1; i >= 0; i--) {
-          const n = parseFloat(lines[i]);
-          if (!isNaN(n) && lines[i].includes('.') && n >= 1.0 && n <= 50) {
-            odd = n;
-            lines.splice(i, 1);
-            break;
-          }
-        }
-
-        // Skip score lines (two numbers like "4 0" or "4 1")
-        const filtered = lines.filter((l) => !/^\d+\s+\d+$/.test(l));
-
-        // Market keyword and pick
-        const marketKeywords = /btts|both teams|number of goals|1x2|double chance|handicap|over|under/i;
-        const marketIdx = filtered.findIndex((l) => marketKeywords.test(l));
-        const marketLabel = marketIdx >= 0 ? filtered[marketIdx] : '';
-        const pick = marketIdx >= 0 && filtered[marketIdx + 1] ? filtered[marketIdx + 1] : '';
-
-        return { homeTeam, awayTeam, league, kickoffRaw, marketLabel, pick, odd };
-      }).filter(Boolean) as Array<{
-        homeTeam: string; awayTeam: string; league: string;
-        kickoffRaw: string; marketLabel: string; pick: string; odd: number;
-      }>;
-
-      return { selections, totalOdds };
-    });
-
-    // Never fabricate data: a missing double must fail loudly instead of saving a fake one.
-    // (Since 2026-10-04 BetMines serves a Cloudflare block page — "You are unable to access betmines.com".)
     if (h2Texts.some((t) => /unable to access|blocked/i.test(t ?? ''))) {
-      console.error('[Scraper] BetMines blocked this request (Cloudflare). No double saved.');
-      return null;
-    }
-    if (!raw || raw.selections.length === 0) {
-      console.error('[Scraper] Double section not found on page (layout changed?). No double saved.');
-      return null;
+      console.error('[Scraper] BetMines blocked this request (Cloudflare). Nothing saved.');
+      return { double: null, risk: null };
     }
 
-    if (raw.selections.length < 2) {
-      console.error(`[Scraper] Only ${raw.selections.length} selection(s) found. Expected 2. No double saved.`);
-      return null;
-    }
-
-    const today = getTodayString();
-    let totalOdds = raw.totalOdds;
-
-    const selections: ScrapedSelection[] = raw.selections.map((s) => {
-      const { market, line } = resolveMarket(s.marketLabel, s.pick);
-      return {
-        homeTeam: s.homeTeam,
-        awayTeam: s.awayTeam,
-        market,
-        line,
-        odd: s.odd,
-        league: s.league,
-        country: extractCountry(s.league),
-        kickoff: s.kickoffRaw ? parseKickoffISO(s.kickoffRaw) : new Date().toISOString(),
-      };
-    });
-
-    if (!totalOdds || totalOdds < 1) {
-      totalOdds = selections.reduce((acc, s) => acc * s.odd, 1);
-    }
-
-    console.log(`[Scraper] Found Double: ${selections.map(s => `${s.homeTeam} vs ${s.awayTeam} (${s.market} @ ${s.odd})`).join(', ')}`);
-    console.log(`[Scraper] Total odds: ${totalOdds}`);
-
-    return { date: today, totalOdds, selections };
+    return { double: await extractSection(page, 'double'), risk: await extractSection(page, 'risk') };
   } catch (err) {
     console.error('[Scraper] Error:', err);
     throw err;
   } finally {
     if (browser) await browser.close();
   }
+}
+
+/** Today's Double only (kept for callers that do not need the Risk bet). */
+export async function scrapeTodaysDouble(): Promise<ScrapedDouble | null> {
+  return (await scrapeBetMinesDaily()).double;
 }
 
 /**

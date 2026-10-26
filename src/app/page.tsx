@@ -178,6 +178,12 @@ export default function HomePage() {
         />
 
         <ExtSection
+          source="BETMINES_RISK"
+          title="BetMines · Risk"
+          blurb="BetMines' daily higher-odds multiple (the Risk bet next to the Double); BetMines keeps no history of it, so tracking starts when this source was added."
+        />
+
+        <ExtSection
           source="FREETIPS_DOUBLE"
           title="FreeTips.com · Daily Double"
           blurb="Two picks per day as one ticket (odds around 3); tracked from 2026-10-25, no earlier history."

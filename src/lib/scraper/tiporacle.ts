@@ -11,6 +11,7 @@ export type ExtSourceKey =
   | 'FOOTBALLPARK'
   | 'FOOTBALLSUPER'
   | 'FREETIPS_DOUBLE'
+  | 'BETMINES_RISK'
   | 'ZULUBET';
 
 /** One match inside a multi-match ticket. */

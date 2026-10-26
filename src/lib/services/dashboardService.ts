@@ -139,6 +139,7 @@ export async function getDashboard(): Promise<SourceSummary[]> {
     summarize('footyacca-btts', 'FootyAccumulators · BTTS treble', extBy('FOOTYACCA_BTTS')),
     summarize('footyacca-o25', 'FootyAccumulators · Over 2.5 treble', extBy('FOOTYACCA_OVER25')),
     summarize('footballpark', 'FootballPark', extBy('FOOTBALLPARK')),
+    summarize('betmines-risk', 'BetMines · Risk', extBy('BETMINES_RISK')),
     summarize('ft-double', 'FreeTips.com · Daily Double', extBy('FREETIPS_DOUBLE')),
     summarize('footballsuper', 'FootballSuper · Tip of the Day', extBy('FOOTBALLSUPER')),
     summarize('zulubet', 'Zulubet · picks @1.7–2.2', extBy('ZULUBET')),

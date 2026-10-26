@@ -43,6 +43,7 @@ const SOURCE_LABELS: Record<string, string> = {
   FOOTBALLPARK: 'FootballPark',
   FOOTBALLSUPER: 'FootballSuper',
   FREETIPS_DOUBLE: 'FreeTips Daily Double',
+  BETMINES_RISK: 'BetMines Risk',
   ZULUBET: 'Zulubet',
 };
 
