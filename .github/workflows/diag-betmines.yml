@@ -1,0 +1,19 @@
+name: Diag BetMines Risk (one-off)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx tsx scripts/diag-betmines-risk.ts
+        env:
+          SCRAPEDO_TOKEN: ${{ secrets.SCRAPEDO_TOKEN }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}

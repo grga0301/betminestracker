@@ -127,7 +127,7 @@ async function fetchViaJina(): Promise<string> {
  * and returns the first HTML that really contains the fixtures, so nothing wrong is ever saved.
  * Each Scrape.do call costs credits (~25 with super+render), so the chain is capped.
  */
-async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
+export async function fetchBetMinesViaScrapeDo(token: string): Promise<string> {
   await logScrapeDoUsage(token);
   const base = { render: 'true', timeout: '60000' };
   const strategies: { name: string; run: () => Promise<string> }[] = [
