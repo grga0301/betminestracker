@@ -20,19 +20,25 @@ const norm = (s: string) =>
  * Translates FreeTips wording into the vocabulary of extTipEvaluator ("Home Win", "BTTS - Yes", "Over 2.5 Goals",
  * "Home Win & BTTS - Yes" …). Anything unknown is passed through, which leaves that leg PENDING instead of guessing.
  */
-export function mapDoubleMarket(rawMarket: string, rawPick: string, home: string, away: string): string {
+export function mapDoubleMarket(rawMarket: string, rawPick: string, home: string, away: string, reason = ''): string {
   const market = rawMarket.toLowerCase();
   const pick = rawPick.replace(/\s*\([^)]*\)\s*$/, '').replace(/\s+/g, ' ').trim(); // drop "(8/15)"
   const side = (name: string): 'Home' | 'Away' | 'Draw' | null => {
-    const n = norm(name);
+    const n = norm(name.replace(/\([^)]*\)/g, ''));
     if (n === 'draw' || n === 'x') return 'Draw';
-    if (n === 'home' || n === '1' || (norm(home) && (n === norm(home) || n.includes(norm(home)) || norm(home).includes(n)))) return 'Home';
-    if (n === 'away' || n === '2' || (norm(away) && (n === norm(away) || n.includes(norm(away)) || norm(away).includes(n)))) return 'Away';
+    if (n === 'home' || n === 'homewin' || n === '1' || (norm(home) && (n === norm(home) || n.includes(norm(home)) || norm(home).includes(n)))) return 'Home';
+    if (n === 'away' || n === 'awaywin' || n === '2' || (norm(away) && (n === norm(away) || n.includes(norm(away)) || norm(away).includes(n)))) return 'Away';
     return null;
   };
   const sideLabel = (s: 'Home' | 'Away' | 'Draw') => (s === 'Draw' ? 'Draw' : `${s} Win`);
   const btts = (v: string) => (/^yes$/i.test(v) ? 'BTTS - Yes' : /^no$/i.test(v) ? 'BTTS - No' : null);
 
+  // Handicap: "Roma (-1)" must NOT be read as a plain win — keep the handicap ("Home -1")
+  if (/handicap/.test(market)) {
+    const hc = pick.match(/\(([+-]\d+(?:\.\d+)?)\)/)?.[1];
+    const s = side(pick);
+    return hc && (s === 'Home' || s === 'Away') ? `${s} ${hc}` : `${rawMarket}: ${pick}`;
+  }
   // "Result/Both Teams to Score": "Barcelona & Yes"
   if (/result/.test(market) && /both teams/.test(market)) {
     const [a, b] = pick.split(/\s*&\s*/);
@@ -46,7 +52,10 @@ export function mapDoubleMarket(rawMarket: string, rawPick: string, home: string
   // Over/Under: the line is in the market ("Over/Under 2.5 Goals") or the pick ("Over 2.5")
   if (/over|under|total goals/.test(market) || /^(over|under)\b/i.test(pick)) {
     const dir = /under/i.test(pick) ? 'Under' : /over/i.test(pick) ? 'Over' : null;
-    const line = `${market} ${pick}`.match(/(\d+(?:\.\d+)?)\s*(?:goals?)?/)?.[1];
+    // The line is in the market/pick, or ("Alternative Total Goals: Over") only in the reason text ("seen over 3.5 goals …")
+    const line =
+      `${market} ${pick}`.match(/(\d+(?:\.\d+)?)\s*(?:goals?)?/)?.[1] ??
+      (dir ? reason.match(new RegExp(dir + '\\s*(\\d+\\.?\\d*)', 'i'))?.[1] : undefined);
     if (dir && line) return `${dir} ${line} Goals`;
   }
   // Double chance: "Arsenal or Draw", "Draw or Chelsea", "Arsenal or Chelsea"
@@ -79,6 +88,7 @@ export function parseFreeTipsDouble(html: string, now = Date.now()): ExtScrapedT
     const names = (li.querySelector('.m-name')?.text ?? '').split(/\s+v(?:s\.?)?\s+/i).map((t) => t.trim());
     const rawMarket = li.querySelector('.match-name span')?.text.trim() ?? '';
     const rawPick = li.querySelector('.plr-name')?.text.trim() ?? '';
+    const reason = li.querySelector('.reasonForTipM p')?.text.trim() ?? '';
     const odd = parseFloat(li.querySelector('.ods')?.getAttribute('data-ods') ?? li.querySelector('.ods')?.text ?? '');
     if (!bet || names.length !== 2 || !rawPick || isNaN(odd)) continue;
 
@@ -89,7 +99,7 @@ export function parseFreeTipsDouble(html: string, now = Date.now()): ExtScrapedT
     legs.push({
       homeTeam: names[0],
       awayTeam: names[1],
-      market: mapDoubleMarket(rawMarket, rawPick, names[0], names[1]),
+      market: mapDoubleMarket(rawMarket, rawPick, names[0], names[1], reason),
       kickoffIso,
       status: 'PENDING',
       homeScore: null,
