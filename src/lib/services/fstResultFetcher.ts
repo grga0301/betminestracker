@@ -7,6 +7,18 @@ const TEAM_ALIASES: Record<string, string> = {
   psg: 'parissaintgermain',
   parissg: 'parissaintgermain',
   parissaintgermain: 'parissaintgermain',
+  // Spellings seen in the [NameMiss] audit (2026-10): same club, different wording between sources.
+  staderennais: 'rennes',
+  slaviaprague: 'slaviapraha',
+  mkdons: 'miltonkeynesdons',
+  fccologne: 'fckoln',
+  cologne: 'fckoln',
+  koln: 'fckoln',
+  borussiamgladbach: 'borussiamonchengladbach',
+  eszarzis: 'esperencesportivedezarzis',
+  esperancesportivedezarzis: 'esperencesportivedezarzis',
+  celtadevigoii: 'rcceltafortuna',
+  lyon: 'olympiquelyonnais',
   psvii: 'jongpsv',
   psv2: 'jongpsv',
   bayernmunchen: 'bayernmunich',
@@ -21,12 +33,31 @@ const TEAM_ALIASES: Record<string, string> = {
 // Club-name filler words that differ between sources ("Celta de Vigo" vs "Celta Vigo").
 const TEAM_STOPWORDS = new Set(['fc', 'cf', 'afc', 'sc', 'fk', 'sk', 'cd', 'ud', 'rc', 'de', 'of', 'the', 'club']);
 
+// Letters that Unicode decomposition leaves alone ("Lillestrøm" must equal "Lillestrom").
+const SPECIAL_LETTERS: Record<string, string> = { 'ø': 'o', 'æ': 'ae', 'œ': 'oe', 'ß': 'ss', 'ł': 'l', 'đ': 'd', 'ð': 'd', 'þ': 'th', 'ı': 'i' };
+
 function stripMarks(name: string): string {
-  return name.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[øæœßłđðþıØÆŒŁĐÐÞ]/g, (c) => SPECIAL_LETTERS[c.toLowerCase()] ?? c);
+}
+
+// Clubs whose names are a word-prefix of a different club (compact, without filler): never the same team.
+const DISTINCT_CLUBS = new Set(['parisfc|parissaintgermain', 'dundee|dundeeunited', 'inter|intermiami', 'fortunakoln|koln', 'cologne|fortunakoln', 'fccologne|fortunakoln', 'fckoln|fortunakoln']);
+
+// Words that mark a reserve / youth / women's side: such a team is never the same as the first team ("PSV" vs "Jong PSV").
+const SIDE_MARKERS = new Set(['jong', 'ii', 'iii', 'b', 'u17', 'u18', 'u19', 'u20', 'u21', 'u23', 'reserves', 'youth', 'women', 'ladies', 'lionesses', 'lyonnes', 'feminin', 'femenil', 'fem']);
+function sideMarkers(name: string): string {
+  return nameTokens(name).filter((t) => SIDE_MARKERS.has(t)).sort().join(',');
+}
+
+function compactOf(name: string): string {
+  return stripMarks(name).toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 function normalize(name: string): string {
-  const compact = stripMarks(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const compact = compactOf(name);
   return TEAM_ALIASES[compact] ?? compact;
 }
 
@@ -41,12 +72,22 @@ function nameTokens(name: string): string[] {
 export function teamsMatch(a: string, b: string): boolean {
   const na = normalize(a);
   const nb = normalize(b);
-  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
+  if (na === nb) return true;
+  if (sideMarkers(a) !== sideMarkers(b)) return false; // first team vs reserve / youth / women's side
+  if (DISTINCT_CLUBS.has([compactOf(a), compactOf(b)].sort().join('|'))) return false;
+  // One compact name at the start or end of the other, from 4 letters on ("Farnham" / "Farnham Town", "Roma" / "AS Roma").
+  // Matches in the middle do not count ("Aris" in "Paris", "Sport" in "Esperence Sportive"); whole words in the middle are
+  // handled by the token rule below.
+  const [shortC, longC] = na.length <= nb.length ? [na, nb] : [nb, na];
+  if (shortC.length >= 4 && (longC.startsWith(shortC) || longC.endsWith(shortC))) return true;
   // Token fallback: every meaningful word of the shorter name matches a word of the longer one.
   const ta = nameTokens(a);
   const tb = nameTokens(b);
   const [small, big] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
-  if (small.length > 0 && small.every((t) => big.some((u) => tokenMatch(t, u)))) return true;
+  // Prefixes and spelling differences are only trusted when both names have several words, so a second word has to agree too
+  // ("Hearts" is not "Sacred Heart", "Atalanta" is not "Atlanta United", "Bay FC" is not "Bayern").
+  const loose = ta.length >= 2 && tb.length >= 2;
+  if (small.length > 0 && small.every((t) => big.some((u) => tokenMatch(t, u, loose)))) return true;
   return abbreviatedMatch(ta, tb);
 }
 
@@ -55,7 +96,7 @@ function abbreviatedMatch(a: string[], b: string[]): boolean {
   if (a.length !== b.length || a.length < 2) return false;
   const [x, y] = [a[0], b[0]];
   const initial = (x.length === 1 && y.startsWith(x)) || (y.length === 1 && x.startsWith(y));
-  return initial && a.slice(1).every((t, i) => tokenMatch(t, b[i + 1]));
+  return initial && a.slice(1).every((t, i) => tokenMatch(t, b[i + 1], true));
 }
 
 function editDistance(a: string, b: string): number {
@@ -70,8 +111,9 @@ function editDistance(a: string, b: string): number {
 }
 
 /** Two words of a club name that plausibly denote the same word: equal, prefix ("Uni" / Universitario), or a small spelling difference. */
-function tokenMatch(x: string, y: string): boolean {
+function tokenMatch(x: string, y: string, loose: boolean): boolean {
   if (x === y) return true;
+  if (!loose) return false;
   const [short, long] = x.length <= y.length ? [x, y] : [y, x];
   if (short.length >= 3 && long.startsWith(short)) return true;
   if (Math.abs(x.length - y.length) > 1) return false;
