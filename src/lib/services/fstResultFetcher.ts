@@ -68,6 +68,30 @@ function tokenMatch(x: string, y: string): boolean {
   return short.length >= 6 && Math.abs(x.length - y.length) <= 1 && editDistance(x, y) <= 2;
 }
 
+// ── [NameMiss] diagnostics (log only, never changes resolving) ───────────────
+// When a source has a FINISHED match on the right date in which exactly ONE of the tip's teams matches, the other
+// name is probably spelled differently there — worth an alias. At most 5 distinct lines per tip.
+let nameMissLogged = 0;
+const nameMissSeen = new Set<string>();
+
+export function resetNameMissLog(): void {
+  nameMissLogged = 0;
+  nameMissSeen.clear();
+}
+
+export function noteNameMiss(tipHome: string, tipAway: string, srcHome: string, srcAway: string, source: string, date: string): void {
+  if (nameMissLogged >= 5) return;
+  const straight = Number(teamsMatch(srcHome, tipHome)) + Number(teamsMatch(srcAway, tipAway));
+  const swapped = Number(teamsMatch(srcHome, tipAway)) + Number(teamsMatch(srcAway, tipHome));
+  if (straight === 2 || swapped === 2) return; // full match, nothing missed
+  if (straight !== 1 && swapped !== 1) return; // neither team matched: unrelated match
+  const line = `  [NameMiss] tip: ${tipHome} vs ${tipAway} | izvor: ${srcHome} vs ${srcAway} (${source}, ${date})`;
+  if (nameMissSeen.has(line)) return;
+  nameMissSeen.add(line);
+  nameMissLogged++;
+  console.log(line);
+}
+
 function isFinished(strStatus: string): boolean {
   const s = (strStatus ?? '').toLowerCase();
   return s === 'match finished' || s === 'ft' || s === 'aet' || s === 'pen';
@@ -102,11 +126,12 @@ async function fetchJson(url: string, timeoutMs = 10_000, extraHeaders: Record<s
 
 // ── TheSportsDB ───────────────────────────────────────────────────────────────
 
-function findInSportsDBEvents(events: any[], homeTeam: string, awayTeam: string): MatchScore | null {
+function findInSportsDBEvents(events: any[], homeTeam: string, awayTeam: string, date = ''): MatchScore | null {
   for (const ev of events) {
     if (!isFinished(ev.strStatus ?? '')) continue;
     const evHome = ev.strHomeTeam ?? '';
     const evAway = ev.strAwayTeam ?? '';
+    noteNameMiss(homeTeam, awayTeam, evHome, evAway, 'TheSportsDB', date);
     const homeOk = teamsMatch(evHome, homeTeam) || teamsMatch(evHome, awayTeam);
     const awayOk = teamsMatch(evAway, awayTeam) || teamsMatch(evAway, homeTeam);
     if (!homeOk || !awayOk) continue;
@@ -152,7 +177,7 @@ async function fetchFromSportsDB(homeTeam: string, awayTeam: string, date: strin
   const base = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}`;
   const dayJson = await sportsDbJson(`${base}/eventsday.php?d=${date}&s=Soccer`);
   if (dayJson) {
-    const found = findInSportsDBEvents(dayJson.events ?? [], homeTeam, awayTeam);
+    const found = findInSportsDBEvents(dayJson.events ?? [], homeTeam, awayTeam, date);
     if (found) return found;
   }
 
@@ -162,7 +187,7 @@ async function fetchFromSportsDB(homeTeam: string, awayTeam: string, date: strin
     const json = await sportsDbJson(`${base}/searchevents.php?e=${query}`);
     if (!json) continue;
     for (const day of [date, prev]) {
-      const found = findInSportsDBEvents((json.event ?? []).filter((e: any) => e.dateEvent === day), homeTeam, awayTeam);
+      const found = findInSportsDBEvents((json.event ?? []).filter((e: any) => e.dateEvent === day), homeTeam, awayTeam, day);
       if (found) return found;
     }
   }
@@ -205,6 +230,7 @@ async function fetchFromESPNLeagues(homeTeam: string, awayTeam: string, date: st
 
       const homeName: string = home.team?.displayName ?? home.team?.name ?? '';
       const awayName: string = away.team?.displayName ?? away.team?.name ?? '';
+      noteNameMiss(homeTeam, awayTeam, homeName, awayName, 'ESPN', date);
       const homeOk = teamsMatch(homeName, homeTeam) || teamsMatch(homeName, awayTeam);
       const awayOk = teamsMatch(awayName, awayTeam) || teamsMatch(awayName, homeTeam);
       if (!homeOk || !awayOk) continue;
@@ -362,6 +388,7 @@ export async function fetchScoreFromSportsDB(
   date: string,
   kickoffMs?: number
 ): Promise<MatchScore | null> {
+  resetNameMissLog();
   console.log(`  [Fetch] TheSportsDB...`);
   const sportsDb = await fetchFromSportsDB(homeTeam, awayTeam, date);
   if (sportsDb) { console.log(`  [Fetch] TheSportsDB: ${sportsDb.homeScore}-${sportsDb.awayScore}`); return sportsDb; }

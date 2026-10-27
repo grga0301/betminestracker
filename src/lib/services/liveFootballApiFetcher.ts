@@ -7,7 +7,7 @@
 // no calls at all once fewer than MIN_CREDITS remain. Only matches with status "finished" count.
 
 import { prisma } from '../db/prisma';
-import { teamsMatch } from './fstResultFetcher';
+import { teamsMatch, noteNameMiss } from './fstResultFetcher';
 
 const MAX_CALLS_PER_RUN = 2;
 const MIN_CREDITS = 60;
@@ -96,6 +96,7 @@ export async function fetchScoreFromLiveFootballApi(
     if (!rows) continue;
     for (const [h, a, hs, as, status] of rows) {
       if (status !== 'finished' || hs === null || as === null) continue;
+      noteNameMiss(home, away, h, a, 'LiveFootballAPI', day);
       if (teamsMatch(h, home) && teamsMatch(a, away)) return { homeScore: hs, awayScore: as };
       if (teamsMatch(h, away) && teamsMatch(a, home)) return { homeScore: as, awayScore: hs };
     }
