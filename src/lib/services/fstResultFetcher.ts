@@ -33,6 +33,7 @@ function normalize(name: string): string {
 function nameTokens(name: string): string[] {
   return stripMarks(name)
     .toLowerCase()
+    .replace(/(?:[a-z]\.){2,}/g, (m) => m.replace(/\./g, '')) // "F.C." / "A.F.C." -> "fc" / "afc"
     .split(/[^a-z0-9]+/)
     .filter((t) => t && !TEAM_STOPWORDS.has(t));
 }
@@ -45,7 +46,16 @@ export function teamsMatch(a: string, b: string): boolean {
   const ta = nameTokens(a);
   const tb = nameTokens(b);
   const [small, big] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
-  return small.length > 0 && small.every((t) => big.some((u) => tokenMatch(t, u)));
+  if (small.length > 0 && small.every((t) => big.some((u) => tokenMatch(t, u)))) return true;
+  return abbreviatedMatch(ta, tb);
+}
+
+/** "O. Petrolero" = "Oriente Petrolero": same word count (>= 2), first word an initial of the other, the rest matching. */
+function abbreviatedMatch(a: string[], b: string[]): boolean {
+  if (a.length !== b.length || a.length < 2) return false;
+  const [x, y] = [a[0], b[0]];
+  const initial = (x.length === 1 && y.startsWith(x)) || (y.length === 1 && x.startsWith(y));
+  return initial && a.slice(1).every((t, i) => tokenMatch(t, b[i + 1]));
 }
 
 function editDistance(a: string, b: string): number {
@@ -59,13 +69,15 @@ function editDistance(a: string, b: string): number {
   return dp[a.length][b.length];
 }
 
-/** Two words of a club name that plausibly denote the same word: equal, initial ("O." / Oriente), prefix ("Uni" / Universitario), or a small spelling difference. */
+/** Two words of a club name that plausibly denote the same word: equal, prefix ("Uni" / Universitario), or a small spelling difference. */
 function tokenMatch(x: string, y: string): boolean {
   if (x === y) return true;
   const [short, long] = x.length <= y.length ? [x, y] : [y, x];
-  if (short.length === 1) return long.startsWith(short);
   if (short.length >= 3 && long.startsWith(short)) return true;
-  return short.length >= 6 && Math.abs(x.length - y.length) <= 1 && editDistance(x, y) <= 2;
+  if (Math.abs(x.length - y.length) > 1) return false;
+  // Spelling differences: 1 letter from 5 letters up, 2 letters only from 7 ("Akhdoud" / "Okhdood" yes, "Torino" / "Toronto" no).
+  const d = editDistance(x, y);
+  return (short.length >= 5 && d <= 1) || (short.length >= 7 && d <= 2);
 }
 
 // ── [NameMiss] diagnostics (log only, never changes resolving) ───────────────
