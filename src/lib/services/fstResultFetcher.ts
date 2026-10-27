@@ -5,6 +5,8 @@
 const TEAM_ALIASES: Record<string, string> = {
   hearts: 'heartofmidlothian',
   psg: 'parissaintgermain',
+  parissg: 'parissaintgermain',
+  parissaintgermain: 'parissaintgermain',
   psvii: 'jongpsv',
   psv2: 'jongpsv',
   bayernmunchen: 'bayernmunich',

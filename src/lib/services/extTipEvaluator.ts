@@ -3,6 +3,8 @@
 // ("Home Win", "No Goal", "Over 2.5", "Sweden Win & Over 2.5" …).
 // Returns null for markets it cannot settle, so the tip stays PENDING instead of being counted as VOID.
 
+import { teamsMatch } from './fstResultFetcher';
+
 type Result = 'WIN' | 'LOSS';
 
 function evaluateLeg(leg: string, home: number, away: number): Result | null {
@@ -60,9 +62,11 @@ function withSides(leg: string, homeTeam?: string, awayTeam?: string): string {
   const m = l.match(/^(.+?)\s+((?:to )?win\b.*|[+-]\d.*)$/i);
   if (m) {
     const name = loose(m[1]);
+    // Loose compare first; then the shared matcher, which knows aliases and abbreviations ("Paris SG" = Paris Saint-Germain).
     const same = (team?: string) => {
       const t = team ? loose(team) : '';
-      return !!t && (name === t || (Math.min(name.length, t.length) >= 5 && (name.includes(t) || t.includes(name))));
+      if (!t) return false;
+      return name === t || (Math.min(name.length, t.length) >= 5 && (name.includes(t) || t.includes(name))) || teamsMatch(m[1], team!);
     };
     if (same(homeTeam)) return 'home ' + m[2];
     if (same(awayTeam)) return 'away ' + m[2];
