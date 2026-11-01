@@ -16,7 +16,7 @@ Vercel only serves the UI and read APIs. **All scraping/resolving runs in GitHub
 | Source | Source key / table | Scraper | Notes |
 |---|---|---|---|
 | BetMines double | `BetDouble` | `scraper/betmines.ts` (Playwright + **Scrape.do**) | Cloudflare blocks direct access (since 2026-10-04); fetched via Scrape.do (`SCRAPEDO_TOKEN`, 1000 requests/month) with a fallback chain: `render` without `super` first (works), then `super` variants, then Jina. `super=true` often returns 502 ROTATION_FAILED. Scheduled runs only call it 00–11 UTC (GitHub delays crons by up to ~6 h); runs exit at once when today's double exists. |
-| FreeSuperTips | `FstTip` | `scraper/freesupertips.ts` | `scripts/*-fst.ts` |
+| FreeSuperTips | `FstTip` | `scraper/freesupertips.ts` | `scripts/*-fst.ts` | **FST odds** = best bookmaker return / stake; the displayed stake is inferred from the fractional odds in the bookmaker links (`computeBestOdds`), because guessing it from the dropdown once halved some odds (1.05 instead of 2.10). Odds < 1.2 are logged as a warning.
 | FreeTips.com | `FtTip` | `scraper/freetips.ts` | falls back to `r.jina.ai` when GitHub IPs get 403 |
 | TipOracle (3 tips/day) | `ExtTip` `TIPORACLE` | `scraper/tiporacle.ts` | jina fallback on 403 |
 | FootyAccumulators Bet of the Day | `ExtTip` `FOOTYACCA` | `scraper/footyaccumulators.ts` | reads `__NEXT_DATA__` JSON; single tip, may be combined market |
