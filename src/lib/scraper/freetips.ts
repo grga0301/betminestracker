@@ -65,16 +65,17 @@ async function fetchFreeTipsHtml(): Promise<string> {
   if (direct.ok) return direct.text();
 
   console.log(`  [FT] direct fetch returned ${direct.status} — retrying via r.jina.ai`);
-  const proxied = await fetch(`https://r.jina.ai/${FT_URL}`, {
-    headers: { 'X-Return-Format': 'html', ...(process.env.JINA_API_KEY ? { Authorization: `Bearer ${process.env.JINA_API_KEY}` } : {}) },
-  });
-  if (proxied.ok) return proxied.text();
-
-  // A used-up key (402) or a rejected one must not take the source down: retry keyless (lower rate limit, still works).
-  console.log(`  [FT] r.jina.ai answered ${proxied.status} — retrying without the API key`);
+  // Keyless first (costs no tokens); the API key is only the fallback — fetching with it on every run used up its balance.
   const keyless = await fetch(`https://r.jina.ai/${FT_URL}`, { headers: { 'X-Return-Format': 'html' } });
-  if (!keyless.ok) throw new Error(`freetips.com returned ${direct.status}, proxy returned ${proxied.status}, keyless proxy ${keyless.status}`);
-  return keyless.text();
+  if (keyless.ok) return keyless.text();
+
+  console.log(`  [FT] keyless r.jina.ai answered ${keyless.status} — retrying with the API key`);
+  if (!process.env.JINA_API_KEY) throw new Error(`freetips.com returned ${direct.status}, keyless proxy ${keyless.status}`);
+  const keyed = await fetch(`https://r.jina.ai/${FT_URL}`, {
+    headers: { 'X-Return-Format': 'html', Authorization: `Bearer ${process.env.JINA_API_KEY}` },
+  });
+  if (!keyed.ok) throw new Error(`freetips.com returned ${direct.status}, keyless proxy ${keyless.status}, keyed proxy ${keyed.status}`);
+  return keyed.text();
 }
 
 export async function scrapeFtBetOfTheDay(): Promise<FtScrapedTip> {

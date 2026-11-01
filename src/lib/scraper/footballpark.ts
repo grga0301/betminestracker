@@ -52,19 +52,21 @@ function routes(): Route[] {
   const jinaKey = process.env.JINA_API_KEY;
   return [
     { name: 'direct', url: URL, headers: { 'User-Agent': UA, 'Accept-Language': 'en' } },
+    // Keyless first (costs no tokens); the keyed requests come after the other free proxies.
+    { name: 'r.jina.ai(no key)', url: `https://r.jina.ai/${URL}`, headers: { 'X-Return-Format': 'html' } },
+    { name: 'r.jina.ai(no key, no-cache)', url: `https://r.jina.ai/${URL}`, headers: { 'X-Return-Format': 'html', 'X-No-Cache': 'true' } },
+    { name: 'allorigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(URL)}`, headers: { 'User-Agent': UA } },
+    { name: 'corsproxy', url: `https://corsproxy.io/?${encodeURIComponent(URL)}`, headers: { 'User-Agent': UA } },
     {
       name: 'r.jina.ai',
       url: `https://r.jina.ai/${URL}`,
       headers: { 'X-Return-Format': 'html', ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}) },
     },
-    { name: 'r.jina.ai(no key)', url: `https://r.jina.ai/${URL}`, headers: { 'X-Return-Format': 'html' } },
     {
       name: 'r.jina.ai(no-cache)',
       url: `https://r.jina.ai/${URL}`,
       headers: { 'X-Return-Format': 'html', 'X-No-Cache': 'true', ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}) },
     },
-    { name: 'allorigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(URL)}`, headers: { 'User-Agent': UA } },
-    { name: 'corsproxy', url: `https://corsproxy.io/?${encodeURIComponent(URL)}`, headers: { 'User-Agent': UA } },
   ];
 }
 

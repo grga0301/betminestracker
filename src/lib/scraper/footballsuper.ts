@@ -55,14 +55,12 @@ export async function scrapeFootballSuperToday(): Promise<ExtScrapedTip[]> {
   const jinaKey = process.env.JINA_API_KEY;
   const routes = [
     { name: 'direct', url: URL, headers: { 'User-Agent': UA, 'Accept-Language': 'en' } as Record<string, string> },
-    {
-      name: 'r.jina.ai',
-      url: `https://r.jina.ai/${URL}`,
-      headers: { 'X-Return-Format': 'html', ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}) } as Record<string, string>,
-    },
-    // Same request without the API key: Jina answers 402 when the key's balance is used up, but still serves keyless
-    // requests at a lower rate limit.
+    // Keyless first: it costs no tokens. The keyed request is only the last resort — fetching pages with the key on every
+    // 30-minute run used up the whole free balance in ~10 days (then Jina answered 402 to everything).
     { name: 'r.jina.ai (no key)', url: `https://r.jina.ai/${URL}`, headers: { 'X-Return-Format': 'html' } as Record<string, string> },
+    ...(jinaKey
+      ? [{ name: 'r.jina.ai (key)', url: `https://r.jina.ai/${URL}`, headers: { 'X-Return-Format': 'html', Authorization: `Bearer ${jinaKey}` } as Record<string, string> }]
+      : []),
   ];
   const failures: string[] = [];
   for (const r of routes) {
