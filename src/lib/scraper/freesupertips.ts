@@ -1,6 +1,6 @@
 // src/lib/scraper/freesupertips.ts
 // Uses fetch + HTML parser — no Playwright needed (WordPress SSR page)
-import { parse } from 'node-html-parser';
+import { parse, HTMLElement } from 'node-html-parser';
 
 export interface ScrapedFstTip {
   date: string;
@@ -54,6 +54,50 @@ function inferMarket(pick: string, homeTeam: string, awayTeam: string): string {
   }
 
   return pick;
+}
+
+const STAKES = [0.5, 1, 2, 5, 10, 15, 20];
+
+/**
+ * Decimal odds from the "returns" grid. The page shows what a stake returns, so odds = return / stake — and the stake
+ * the page displays is NOT always the one marked as selected (a wrong guess halved some odds: 1.05 instead of 2.10).
+ * The bookmaker links carry the real fractional odds ("...~4%2F6..." = 4/6), which reveals the displayed stake.
+ */
+export function computeBestOdds(betGrid: HTMLElement): number {
+  const rows = betGrid.querySelectorAll('.BetGrid__returns').map((el) => {
+    const ret = parseFloat(el.text.replace(/[£,\s]/g, ''));
+    let fractional: number | null = null;
+    let sib = el.nextElementSibling;
+    for (let i = 0; sib && i < 4 && fractional === null; i++, sib = sib.nextElementSibling) {
+      const m = (sib.getAttribute('href') ?? '').match(/~(\d+)(?:%2F|\/)(\d+)/i);
+      if (m && Number(m[2]) > 0) fractional = 1 + Number(m[1]) / Number(m[2]);
+    }
+    return { ret, fractional };
+  }).filter((r) => !isNaN(r.ret) && r.ret > 0);
+  if (rows.length === 0) return 0;
+
+  // 1. Stake implied by a bookmaker whose fractional odds are in its link
+  let stake = 0;
+  for (const r of rows) {
+    if (!r.fractional) continue;
+    const implied = r.ret / r.fractional;
+    const near = STAKES.find((s) => Math.abs(implied - s) / s < 0.04);
+    if (near) {
+      stake = near;
+      break;
+    }
+  }
+  // 2. Otherwise the selected option of the stake dropdown (default £20)
+  if (!stake) {
+    const selected = betGrid.querySelectorAll('select option').find(
+      (o) => o.getAttribute('selected') !== null || o.classNames?.includes('active')
+    );
+    stake = parseFloat(selected?.getAttribute('value') ?? '20');
+    console.log(`[FST] stake inferred from the dropdown (£${stake}) — no fractional odds in the bookmaker links`);
+  }
+  const odds = Math.round((Math.max(...rows.map((r) => r.ret)) / stake) * 100) / 100;
+  if (odds < 1.2) console.log(`[FST] WARNING: odds ${odds} look too low for a tip — stake £${stake} may be wrong`);
+  return odds;
 }
 
 export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
@@ -128,26 +172,8 @@ export async function scrapeFstBetOfTheDay(): Promise<ScrapedFstTip | null> {
   const awayFromImg = teamNames[1] || pick.replace(/\s+to\s+win.*/i, '').trim();
 
   // Best odds from BetGrid
-  let bestOdds = 0;
   const betGrid = card.querySelector('.BetGrid');
-  if (betGrid) {
-    // Find selected stake option
-    const selectedOption = betGrid.querySelectorAll('select option').find(
-      (o) => o.getAttribute('selected') !== null || o.classNames?.includes('active')
-    );
-    const stake = parseFloat(selectedOption?.getAttribute('value') ?? '20');
-
-    const returnEls = betGrid.querySelectorAll('.BetGrid__returns');
-    const returns = returnEls.map((el) => {
-      const text = el.text.replace(/[£,]/g, '').trim();
-      return parseFloat(text);
-    }).filter((n) => !isNaN(n) && n > 0);
-
-    const bestReturn = returns.length > 0 ? Math.max(...returns) : 0;
-    if (stake > 0 && bestReturn > 0) {
-      bestOdds = Math.round((bestReturn / stake) * 100) / 100;
-    }
-  }
+  const bestOdds = betGrid ? computeBestOdds(betGrid) : 0;
 
   if (!pick) {
     console.log('[FST] Empty pick — could not extract tip');
