@@ -75,9 +75,12 @@ function scoresIn(text: string, home: string, away: string): Score[] {
   return found;
 }
 
+// Set after the first 401/402 (key rejected or balance used up): no further search calls in this process.
+let searchDisabled = false;
+
 async function searchSnippets(home: string, away: string, date: string): Promise<Snippet[]> {
   const key = process.env.JINA_API_KEY;
-  if (!key) return [];
+  if (!key || searchDisabled) return [];
   const [y, mo, d] = date.split('-').map(Number);
   const q = `${home} ${away} ${d} ${MONTH_NAMES[mo - 1]} ${y} result`;
   try {
@@ -86,6 +89,7 @@ async function searchSnippets(home: string, away: string, date: string): Promise
       signal: AbortSignal.timeout(90_000),
     });
     if (!res.ok) {
+      if (res.status === 401 || res.status === 402) searchDisabled = true;
       console.log(`  [Search] Jina HTTP ${res.status}${res.status === 402 ? ' (account balance used up — top up or replace JINA_API_KEY; the search fallback needs a key)' : ''}`);
       return [];
     }
