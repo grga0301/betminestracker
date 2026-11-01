@@ -54,6 +54,13 @@ const loose = (n: string) =>
 /** Replace a leading team name by "home"/"away" so "Sweden Win" reads like "Away Win". */
 function withSides(leg: string, homeTeam?: string, awayTeam?: string): string {
   const l = leg.trim();
+  // A leg that is only a team name ("Bayern Munich and Both Teams To Score") means that team wins.
+  if (homeTeam && awayTeam) {
+    const h = teamsMatch(l, homeTeam);
+    const a = teamsMatch(l, awayTeam);
+    if (h && !a) return 'home win';
+    if (a && !h) return 'away win';
+  }
   const starts = (team?: string) => !!team && l.toLowerCase().startsWith(team.toLowerCase() + ' ');
   if (starts(homeTeam)) return 'home' + l.slice(homeTeam!.length);
   if (starts(awayTeam)) return 'away' + l.slice(awayTeam!.length);

@@ -3,6 +3,7 @@
 
 import { evaluateSelection } from './resultEvaluator';
 import { evaluateExtMarket } from './extTipEvaluator';
+import { teamsMatch } from './fstResultFetcher';
 
 // Pinned model ids get retired (gemini-2.0-flash now returns 404), so default to the rolling alias.
 // Flash-Lite has the most generous free tier; accuracy is enough for "final score of X vs Y".
@@ -212,6 +213,31 @@ export async function evaluateWithFallback(
  * (unknown market, push, Gemini unavailable) so the caller keeps it PENDING instead of storing VOID.
  * Tries, in order: the legacy rules, the wider pick/market vocabulary (handicaps, "to win to nil" …), Gemini.
  */
+/** "A and B" / "A & B" / "A + B" where every part is a market phrase or one of the two teams (so "Brighton and Hove Albion" is not a combination). */
+export function isCombinedPick(pick: string, homeTeam: string, awayTeam: string, market = ''): boolean {
+  const parts = splitCombinedPick(pick);
+  if (parts.length < 2) return false;
+  const bttsMarket = /btts|both teams/i.test(market);
+  const marketish = (p: string) =>
+    /both teams|btts|over|under|win|draw|goal|clean sheet/i.test(p) ||
+    (bttsMarket && /^(yes|no)$/i.test(p)) || // "Real Madrid & Yes" under a BTTS market
+    teamsMatch(p, homeTeam) ||
+    teamsMatch(p, awayTeam);
+  return parts.every(marketish);
+}
+
+function splitCombinedPick(pick: string): string[] {
+  return pick.split(/\s+(?:&|\+|and)\s+/i).map((p) => p.trim()).filter(Boolean);
+}
+
+/** Rewrites the parts so the shared evaluator understands them: bare "Yes"/"No" under a BTTS market become "BTTS - Yes/No". */
+function wholePick(pick: string, market: string): string {
+  const bttsMarket = /btts|both teams/i.test(market);
+  return splitCombinedPick(pick)
+    .map((p) => (bttsMarket && /^yes$/i.test(p) ? 'BTTS - Yes' : bttsMarket && /^no$/i.test(p) ? 'BTTS - No' : p))
+    .join(' & ');
+}
+
 export async function evaluateStrict(
   market: string,
   homeTeam: string,
@@ -221,6 +247,17 @@ export async function evaluateStrict(
   line: number | null = null,
   pick?: string,
 ): Promise<'WIN' | 'LOSS' | null> {
+  // The market is only a category label ("BTTS"); a combined pick such as "Bayern Munich and Both Teams To Score" has to be
+  // settled as a whole. Settling it from the label alone turned a 2-2 into a WIN.
+  if (pick && isCombinedPick(pick, homeTeam, awayTeam, market)) {
+    const whole = evaluateExtMarket(wholePick(pick, market), homeScore, awayScore, homeTeam, awayTeam);
+    if (whole) return whole;
+    // unknown combination: never fall back to the label — ask Gemini or keep the tip PENDING
+    if (!process.env.GEMINI_API_KEY) return null;
+    const g = await evaluateWithGemini(market, pick, homeTeam, awayTeam, homeScore, awayScore);
+    return g === 'WIN' || g === 'LOSS' ? g : null;
+  }
+
   const local = evaluateSelection({ market, line, homeScore, awayScore });
   if (local === 'WIN' || local === 'LOSS') return local;
 
