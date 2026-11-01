@@ -57,6 +57,7 @@ function routes(): Route[] {
       url: `https://r.jina.ai/${URL}`,
       headers: { 'X-Return-Format': 'html', ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}) },
     },
+    { name: 'r.jina.ai(no key)', url: `https://r.jina.ai/${URL}`, headers: { 'X-Return-Format': 'html' } },
     {
       name: 'r.jina.ai(no-cache)',
       url: `https://r.jina.ai/${URL}`,

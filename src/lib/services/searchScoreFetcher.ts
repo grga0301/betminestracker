@@ -86,7 +86,7 @@ async function searchSnippets(home: string, away: string, date: string): Promise
       signal: AbortSignal.timeout(90_000),
     });
     if (!res.ok) {
-      console.log(`  [Search] Jina HTTP ${res.status}`);
+      console.log(`  [Search] Jina HTTP ${res.status}${res.status === 402 ? ' (account balance used up — top up or replace JINA_API_KEY; the search fallback needs a key)' : ''}`);
       return [];
     }
     const json = await res.json();

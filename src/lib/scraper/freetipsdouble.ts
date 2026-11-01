@@ -147,6 +147,9 @@ export async function scrapeFreeTipsDoubleToday(includeStarted = false): Promise
       url: `https://r.jina.ai/${URL}`,
       headers: { 'X-Return-Format': 'html', ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}) } as Record<string, string>,
     },
+    // Same request without the API key: Jina answers 402 when the key's balance is used up, but still serves keyless
+    // requests at a lower rate limit.
+    { name: 'r.jina.ai (no key)', url: `https://r.jina.ai/${URL}`, headers: { 'X-Return-Format': 'html' } as Record<string, string> },
   ];
   const failures: string[] = [];
   for (const r of routes) {
