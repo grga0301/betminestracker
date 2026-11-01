@@ -54,13 +54,6 @@ const loose = (n: string) =>
 /** Replace a leading team name by "home"/"away" so "Sweden Win" reads like "Away Win". */
 function withSides(leg: string, homeTeam?: string, awayTeam?: string): string {
   const l = leg.trim();
-  // A leg that is only a team name ("Bayern Munich and Both Teams To Score") means that team wins.
-  if (homeTeam && awayTeam) {
-    const h = teamsMatch(l, homeTeam);
-    const a = teamsMatch(l, awayTeam);
-    if (h && !a) return 'home win';
-    if (a && !h) return 'away win';
-  }
   const starts = (team?: string) => !!team && l.toLowerCase().startsWith(team.toLowerCase() + ' ');
   if (starts(homeTeam)) return 'home' + l.slice(homeTeam!.length);
   if (starts(awayTeam)) return 'away' + l.slice(awayTeam!.length);
@@ -77,6 +70,15 @@ function withSides(leg: string, homeTeam?: string, awayTeam?: string): string {
     };
     if (same(homeTeam)) return 'home ' + m[2];
     if (same(awayTeam)) return 'away ' + m[2];
+  }
+
+  // Last resort: a leg that is ONLY a team name ("Bayern Munich and Both Teams To Score") means that team wins. It must not
+  // contain any market word, otherwise "<team> to win to nil" or "<team> -1" would be read as a plain win.
+  if (homeTeam && awayTeam && !/(win|wins|draw|nil|over|under|btts|goal|goals|score|yes|no|to|or)|[+-]\d/i.test(l)) {
+    const h = teamsMatch(l, homeTeam);
+    const a = teamsMatch(l, awayTeam);
+    if (h && !a) return 'home win';
+    if (a && !h) return 'away win';
   }
   return l;
 }
